@@ -1,15 +1,15 @@
-[I 2024-01-29 13:53:18.488 LabApp] JupyterLab extension loaded from /cluster/apps/eb/software/Anaconda3/2022.10/lib/python3.9/site-packages/jupyterlab
-[I 2024-01-29 13:53:18.488 LabApp] JupyterLab application directory is /cluster/apps/eb/software/Anaconda3/2022.10/share/jupyter/lab
-[I 13:53:18.493 NotebookApp] Serving notebooks from local directory: /cluster/home/kristiwk/tba4925
-[I 13:53:18.493 NotebookApp] Jupyter Notebook 6.4.12 is running at:
-[I 13:53:18.493 NotebookApp] http://localhost:8888/?token=a15259f9cedeb935dfe193111472f89f6fd248e5b9317a39
-[I 13:53:18.493 NotebookApp]  or http://127.0.0.1:8888/?token=a15259f9cedeb935dfe193111472f89f6fd248e5b9317a39
-[I 13:53:18.493 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-[C 13:53:18.512 NotebookApp] 
+[I 2024-02-06 15:13:56.588 LabApp] JupyterLab extension loaded from /cluster/apps/eb/software/Anaconda3/2022.10/lib/python3.9/site-packages/jupyterlab
+[I 2024-02-06 15:13:56.588 LabApp] JupyterLab application directory is /cluster/apps/eb/software/Anaconda3/2022.10/share/jupyter/lab
+[I 15:13:56.592 NotebookApp] Serving notebooks from local directory: /cluster/home/kristiwk/tba4925
+[I 15:13:56.593 NotebookApp] Jupyter Notebook 6.4.12 is running at:
+[I 15:13:56.593 NotebookApp] http://localhost:8888/?token=808d163c2195be7cb02bca890ea10ddce3854e3ff855225c
+[I 15:13:56.593 NotebookApp]  or http://127.0.0.1:8888/?token=808d163c2195be7cb02bca890ea10ddce3854e3ff855225c
+[I 15:13:56.593 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 15:13:56.604 NotebookApp] 
     
     To access the notebook, open this file in a browser:
-        file:///cluster/home/kristiwk/.local/share/jupyter/runtime/nbserver-1491879-open.html
+        file:///cluster/home/kristiwk/.local/share/jupyter/runtime/nbserver-1108414-open.html
     Or copy and paste one of these URLs:
-        http://localhost:8888/?token=a15259f9cedeb935dfe193111472f89f6fd248e5b9317a39
-     or http://127.0.0.1:8888/?token=a15259f9cedeb935dfe193111472f89f6fd248e5b9317a39
-[I 14:02:56.707 NotebookApp] 302 GET /?token=a15259f9cedeb935dfe193111472f89f6fd248e5b9317a39 (127.0.0.1) 0.450000ms
+        http://localhost:8888/?token=808d163c2195be7cb02bca890ea10ddce3854e3ff855225c
+     or http://127.0.0.1:8888/?token=808d163c2195be7cb02bca890ea10ddce3854e3ff855225c
+[I 11:40:54.713 NotebookApp] 302 GET /?token=808d163c2195be7cb02bca890ea10ddce3854e3ff855225c (127.0.0.1) 1.670000ms
