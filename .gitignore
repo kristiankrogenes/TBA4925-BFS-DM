@@ -1,4 +1,6 @@
 __pycache__/
 
 Balsfjord/
+checkpoints/
 data_processing.py
+test.py

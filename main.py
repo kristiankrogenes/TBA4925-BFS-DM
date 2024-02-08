@@ -1,62 +1,63 @@
 import torch
+import kornia.augmentation as KA 
+
 from dataset import BFSDataset
-
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, jaccard_score
-
-def calculate_metrics(preds, labels):
-
-    average_accuracy = []
-    average_precision = []
-    average_recall = []
-    average_f1 = []
-    average_iou = []
-
-    for index, (pred, label) in enumerate(zip(preds, labels)):
-
-        pred[pred > 0] = 1
-
-        pred_flat = pred.flatten()
-        label_flat = label.flatten()
-
-        accuracy = accuracy_score(label_flat, pred_flat)
-        precision = precision_score(label_flat, pred_flat, zero_division=0)
-        recall = recall_score(label_flat, pred_flat, zero_division=0)
-        f1 = f1_score(label_flat, pred_flat, zero_division=0)
-        iou = jaccard_score(label_flat, pred_flat, zero_division=0)
-
-        average_accuracy.append(accuracy)
-        average_precision.append(precision)
-        average_recall.append(recall)
-        average_f1.append(f1)
-        average_iou.append(iou)
-
-    print(f"Metrics for {preds.__len__()} predictions ===================")
-    print("Accuracy:", sum(average_accuracy) / len(average_accuracy))
-    print("Precision:", sum(average_precision) / len(average_precision))
-    print("Recall:", sum(average_recall) / len(average_recall))
-    print("F1:", sum(average_f1) / len(average_f1))
-    print("IoU:", sum(average_iou) / len(average_iou))
+from model.BFSDiffusionModel import BFSDiffusionModel
 
 if __name__ == "__main__":
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print("Device:", device, "//", torch.cuda.get_device_name(0))
+    print("\nDevice:", device, "//", torch.cuda.get_device_name(0), "\n")
 
+    TARGET_SIZE = (128, 128)
+    # T = [
+    #     # KA.RandomCrop((2*CROP_SIZE,2*CROP_SIZE)),
+    #     KA.Resize(size=TARGET_SIZE, antialias=True),
+    #     # KA.RandomVerticalFlip()
+    # ]
+    T = [
+        KA.Resize(size=TARGET_SIZE, antialias=True),
+        KA.RandomHorizontalFlip(),
+        # KA.ToTensor(), # Scales data into [0,1] 
+        # KA.Lambda(lambda t: (t * 2) - 1) # Scale between [-1, 1] 
+    ]
+    
     label_ds = BFSDataset(
         'data/original/labels',
-        transforms=None,
+        transforms=T,
         paired=False,
         return_pair=False
     )
 
     pred_ds = BFSDataset(
         'data/processed/predictions',
-        transforms=None,
+        transforms=T,
         paired=False,
         return_pair=False
     )
 
-    calculate_metrics(pred_ds, label_ds)
+    batch_size = 10
+    epochs = 10000
+    timesteps = 100
+
+    if True:
+        load_checkpoint = True
+        new_checkpoint = True
+        if load_checkpoint:
+            checkpoint_path = "./checkpoints/UNet_128x128_bs10_t100_v1_e1000.ckpt"
+        else:
+            checkpoint_path = None
+        if new_checkpoint:
+            new_checkpoint_path = f"./checkpoints/UNet_{TARGET_SIZE[0]}x{TARGET_SIZE[1]}_bs{batch_size}_t{timesteps}_v1"
+        else:
+            new_checkpoint_path = None
+
+        bfs = BFSDiffusionModel(train_dataset=label_ds,
+                                batch_size=batch_size,
+                                num_timesteps=timesteps,
+                                checkpoint=checkpoint_path)
+        
+        bfs.train(epochs=epochs, checkpoint_path=new_checkpoint_path)
 
 
 
