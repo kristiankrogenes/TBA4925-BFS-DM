@@ -4,3 +4,6 @@ Balsfjord/
 checkpoints/
 data_processing.py
 test.py
+
+inference/
+ii/
