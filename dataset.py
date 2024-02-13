@@ -15,21 +15,16 @@ class BFSDataset(Dataset):
 
     def __init__(self,
                 root_dir,
-                transforms=None,
-                paired=True,
-                return_pair=False):
+                type="train",
+                transforms=None):
         
         self.root_dir = root_dir
+        self.type = type
         self.transforms = transforms
-        self.paired=paired
-        self.return_pair=return_pair
-        
-        # set up transforms
+
         if self.transforms is not None:
-            if self.paired:
-                data_keys=2*['input']
-            else:
-                data_keys=['input']
+            
+            data_keys=['input']
 
             self.input_T=KA.container.AugmentationSequential(
                 *self.transforms,
@@ -37,45 +32,39 @@ class BFSDataset(Dataset):
                 same_on_batch=False
             )   
         
-        # check files
-        supported_formats=['png']        
-        self.files=[el for el in os.listdir(self.root_dir) if el.split('.')[-1] in supported_formats]
+        supported_formats=['png']
+        self.label_files = [el for el in os.listdir(os.path.join(self.root_dir, "original/labels/", self.type)) if el.split('.')[-1] in supported_formats]
+        self.pred_files = [el for el in os.listdir(os.path.join(self.root_dir, "processed/predictions/", self.type)) if el.split('.')[-1] in supported_formats]
 
     def __len__(self):
-        return len(self.files)
+        return len(self.label_files)
 
     def __getitem__(self, idx):
+
         if torch.is_tensor(idx):
             idx = idx.tolist()            
-
-        img_name = os.path.join(self.root_dir, self.files[idx])
-        # a1 = Image.open(img_name)
-        # a1.save(f"./input0.png", format="PNG")
-        image_array = np.asarray(Image.open(img_name))
-        image_array_writable = image_array.copy()
-        image_tensor = torch.FloatTensor(image_array_writable)
-
-        # assert image_tensor.shape == torch.Size((512, 512)), "Image tensor does not have the correct shape."
-
-        if self.paired:
-            c, h, w = image.shape
-            slice=int(w/2)
-            image2=image[:,:,slice:]
-            image=image[:,:,:slice]
-            if self.transforms is not None:
-                out = self.input_T(image, image2)
-                image=out[0][0]
-                image2=out[1][0]
-        elif self.transforms is not None:
-            image = self.input_T(image_tensor)[0]
-            image1 = image / 255
-            image2 = (image1.clip(0, 1).mul_(2)).sub_(1)
-
-        if self.return_pair:
-            return image2, image
-        else:
-            # print("DS", image.shape, image.unsqueeze(0).shape)
-            # return image.unsqueeze(0) # [H, W] -> [C, H, W]
-            return image2 # [C, H, W]
         
-        # return image_tensor.unsqueeze(0) # [H, W] -> [C, H, W]
+        label_img_name = os.path.join("data/original/labels/", self.type, self.label_files[idx])
+        pred_img_name = os.path.join("data/processed/predictions/", self.type, self.pred_files[idx])
+
+        label_image_array = np.asarray(Image.open(label_img_name))
+        label_image_array_writable = label_image_array.copy()
+        label_image_tensor = torch.FloatTensor(label_image_array_writable)
+
+        pred_image_array = np.asarray(Image.open(pred_img_name))
+        pred_image_array_writable = pred_image_array.copy()
+        pred_image_tensor = torch.FloatTensor(pred_image_array_writable)
+
+
+        if self.transforms is not None:
+            label_image = self.input_T(label_image_tensor)[0]
+            label_image = label_image / 255
+            label_image = (label_image.clip(0, 1).mul_(2)).sub_(1)
+
+            pred_image = self.input_T(pred_image_tensor)[0]
+            pred_image = pred_image / 255
+            pred_image = (pred_image.clip(0, 1).mul_(2)).sub_(1)
+
+            return label_image, pred_image # [C, H, W]
+        else:
+            return label_image_tensor, pred_image_tensor

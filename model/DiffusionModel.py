@@ -7,38 +7,33 @@ from model.samplers.forward_process import GaussianForwardProcess
 from model.samplers.DDPM import DDPMSampler
 from model.network.DMUNet import UnetConvNextBlock
 from model.network.SimpleUnet import SimpleUnet
+from utils.utils import transform_model_output_to_image
 
 from PIL import Image
 import numpy as np
 
-from torchvision import transforms
-def show_tensor_image(image):
-    reverse_transforms = transforms.Compose([
-        transforms.Lambda(lambda t: (t + 1) / 2),
-        transforms.Lambda(lambda t: t.permute(1, 2, 0)), # CHW to HWC
-        transforms.Lambda(lambda t: t * 255.),
-        transforms.Lambda(lambda t: t.numpy().astype(np.uint8)),
-        transforms.ToPILImage(),
-    ])
-    return reverse_transforms(image)
-
 class DiffusionModel(nn.Module):
 
     def __init__(self,
-                generated_channels=1,              
+                generated_channels=1,
                 loss_fn=F.mse_loss,
                 learning_rate=1e-3,
-                schedule='linear',
+                schedule="linear",
                 num_timesteps=1000,
                 sampler=None,
-                checkpoint=None):
+                checkpoint=None,
+                device="cpu", 
+                batch_size=None,
+                image_size=None):
         
         super().__init__()
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device
 
         self.generated_channels = generated_channels
         self.num_timesteps = num_timesteps
+        self.batch_size = batch_size
+        self.image_size = image_size
 
         self.loss_fn = loss_fn
 
@@ -69,57 +64,59 @@ class DiffusionModel(nn.Module):
     @torch.no_grad()
     def forward(self, batch_input=None):
         
-        # b, c, h, w = batch_input.shape
         b, h, w = 1, 128, 128
+
         # 1. Create initial noise with Gaussian Forward Process
-        x_t = torch.randn([b, self.generated_channels, h, w], device=self.device)
-        # x_t = self.forward_process(batch_input, self.num_timesteps-1)
+        if not batch_input is None:
+            batch_input = batch_input.to(self.device)
+            # x_t = self.forward_process(batch_input, self.num_timesteps-1)
+            for i in range(self.num_timesteps):
+                x_t = self.forward_process.step(batch_input, i)
+        else:
+            x_t = torch.randn([b, self.generated_channels, h, w], device=self.device)
 
         # 2. Denoising image, step-by-step
         it = reversed(range(0, self.num_timesteps))
-        for i in tqdm(it, desc='Diffusion sampling', total=self.num_timesteps):
+        for i in tqdm(it, desc='Diffusion Sampling', total=self.num_timesteps):
 
             t = torch.full((b,), i, device=self.device, dtype=torch.long)
 
-            # model_input = torch.cat([x_t, batch_input], 1).to(device)
-            # model_input = x_t.to(self.device)
-
-            z_t = self.network(x_t, t) # prediction of noise
-
-            x_t = self.sampler(x_t, t, z_t) # prediction of next state
-            
-            # generated_img = torch.clamp(x_t, -1.0, 1.0)
-            if i % 10 == 0:
-                generated_img = torch.clamp(x_t, -1.0, 1.0)
-                xt_tensor = generated_img.detach().cpu()
-                outs = show_tensor_image(xt_tensor[0])
-                # xt = Image.fromarray((xt_tensor[0][0] * 255).numpy().astype(np.uint8))
+            if (i % 10 == 0 or i in [100, 99, 98, 97, 96, 95, 94, 93, 92, 91]) and False:
+                xt_tensor = x_t.detach().cpu()
+                outs = transform_model_output_to_image(xt_tensor[0])
                 outs.save(f"./ii/out{i}.png", format="PNG")
+
+            z_t = self.network(x_t, t)          # prediction of noise
+            x_t = self.sampler(x_t, t, z_t)     # prediction of next state
             
         return torch.clamp(x_t, -1.0, 1.0)
 
-    def train(self, epochs, data_loader, checkpoint_path=None):
+    def train(self, epochs, data_loader, save_model=False):
 
         for epoch in range(self.start_epoch, epochs+1):
             loss_epoch = []
             for batch in tqdm(data_loader, desc=f"Epoch {epoch} - Diffusion Training"):
 
-                b, c, h, w = batch.shape
+                # b, c, h, w = batch.shape
+                label, pred = batch
+                # print(label.shape, pred.shape)
                 
-                batch = batch.to(self.device)
+                b, c, h, w = label.shape
+                
+                label = label.to(self.device)
+                pred = pred.to(self.device)
 
-                # t = torch.full((b,), self.num_timesteps, device=self.device, dtype=torch.long)
-                # t = torch.full((b,), self.num_timesteps, device=self.device, dtype=torch.long)
                 t = torch.randint(0, self.num_timesteps, (b,), device=self.device).long()
 
-                x_t, noise = self.forward_process(batch, t, return_noise=True)
+                label_xt, label_noise = self.forward_process(label, t, return_noise=True)
+                # pred_xt, pred_noise = self.forward_process(pred, t, return_noise=True)
 
-                mi = x_t.to(self.device)
-                noise = noise.to(self.device)
+                model_input = label_xt.to(self.device)
+                # noise = noise.to(self.device)
 
-                noise_pred = self.network(mi, t)
+                noise_prediction = self.network(model_input, t)
 
-                loss = self.loss_fn(noise_pred, noise)
+                loss = self.loss_fn(noise_prediction, label_noise)
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -130,14 +127,15 @@ class DiffusionModel(nn.Module):
             avg_loss_epoch = sum(loss_epoch) / len(loss_epoch)
             print("Epoch", epoch, "//", avg_loss_epoch)
 
-            if checkpoint_path is not None:
+            if save_model:
                 if epoch % 100 == 0:
                     checkpoint = {
                         'epoch': epoch,
                         'model_state_dict': self.network.state_dict(),
                         'optimizer_state_dict': self.optimizer.state_dict(),
                     }
-                    torch.save(checkpoint, f"{checkpoint_path}_e{epoch}.ckpt")
+                    new_checkpoint_path = f"./checkpoints/BaselineLabel2/UNet_{self.image_size[0]}x{self.image_size[1]}_bs{self.batch_size}_t{self.num_timesteps}_v2"
+                    torch.save(checkpoint, f"{new_checkpoint_path}_e{epoch}.ckpt")
                     print(f"Model saved at epoch {epoch}")
 
 

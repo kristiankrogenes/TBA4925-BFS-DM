@@ -12,6 +12,8 @@ from torch import nn
 
 from model.samplers.beta_schedules import *
 
+from utils.utils import transform_model_output_to_image
+
 class ForwardModel(nn.Module):
     """
         (Forward Model Template)
@@ -79,7 +81,7 @@ class GaussianForwardProcess(ForwardModel):
         std = self.alphas_one_minus_cumprod_sqrt[t].view(b,1,1,1)
         
         noise = torch.randn_like(x_0)
-        output = mean + std * noise        
+        output = mean + std * noise
         
         if not return_noise:
             return output
@@ -93,13 +95,16 @@ class GaussianForwardProcess(ForwardModel):
             
             q(x_t | x_t-1)=N(x_t; alphas_sqrt(t)*x_0,betas(t)*I)
         """
-        assert (t<self.num_timesteps).all()
+        # assert (t<self.num_timesteps).all()
         
-        mean=self.alphas_sqrt[t]*x_t
-        std=self.betas_sqrt[t]
+        mean = self.alphas_sqrt[t] * x_t
+        std = self.betas_sqrt[t]
         
-        noise=torch.randn_like(x_0)
-        output=mean+std*noise        
+        noise = torch.randn_like(x_t)
+        output = mean + std * noise
+
+        input_d = transform_model_output_to_image(output[0].detach().cpu())
+        input_d.save(f"./ii/din{t}.png", format="PNG")               
         
         if not return_noise:
             return output

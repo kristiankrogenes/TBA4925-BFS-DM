@@ -1,63 +1,64 @@
+import argparse
 import torch
 import kornia.augmentation as KA 
 
 from dataset import BFSDataset
 from model.BFSDiffusionModel import BFSDiffusionModel
 
+from utils.utils import check_parameters_for_training
+
+class CFG():
+
+    def __init__(self, epochs, size, batch_size, timesteps, model_path, save_model):
+        if check_parameters_for_training(epochs, size, batch_size, timesteps, model_path):
+            self.epochs = epochs
+            self.TARGET_SIZE = (size, size)
+            self.batch_size = batch_size
+            self.timesteps = timesteps
+            self.model_path = model_path
+            self.save_model = False if save_model==None else save_model
+        else:
+            raise ValueError("Something went wrong.") 
+
 if __name__ == "__main__":
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print("\nDevice:", device, "//", torch.cuda.get_device_name(0), "\n")
+    # // ARGUMENT PARSER // ============================================================================
+    parser = argparse.ArgumentParser(description="Parameters to train a Diffusion Model.")
+    parser.add_argument('--epochs', type=int, help="How many epochs the model will train on.")
+    parser.add_argument('--size', type=int, help="The size of the images during training.")
+    parser.add_argument('--batch_size', type=int, help="The batch size")
+    parser.add_argument('--timesteps', type=int, help="The number of timesteps.")
+    parser.add_argument('--model_path', type=str, help="The path of a model to continue training on.")
+    parser.add_argument('--save_model', type=bool, help="Should the model be saved or not.")
+    args = parser.parse_args()
+    # ==================================================================================================
 
-    TARGET_SIZE = (128, 128)
-    # T = [
-    #     # KA.RandomCrop((2*CROP_SIZE,2*CROP_SIZE)),
-    #     KA.Resize(size=TARGET_SIZE, antialias=True),
-    #     # KA.RandomVerticalFlip()
-    # ]
+    cfg = CFG(args.epochs, args.size, args.batch_size, args.timesteps, args.model_path, args.save_model)
+
     T = [
-        KA.Resize(size=TARGET_SIZE, antialias=True),
-        KA.RandomHorizontalFlip(),
-        # KA.ToTensor(), # Scales data into [0,1] 
-        # KA.Lambda(lambda t: (t * 2) - 1) # Scale between [-1, 1] 
+        KA.Resize(size=cfg.TARGET_SIZE, antialias=True),
+        KA.RandomHorizontalFlip() 
     ]
+
+    train_dataset = BFSDataset(
+        root_dir="data",
+        type="train",
+        transforms=T
+    )
+
+    val_dataset = BFSDataset(
+        root_dir="data",
+        type="val",
+        transforms=T
+    )
+
+    bfs = BFSDiffusionModel(dataset=train_dataset,
+                            batch_size=cfg.batch_size,
+                            image_size=cfg.TARGET_SIZE,
+                            num_timesteps=cfg.timesteps,
+                            checkpoint=cfg.model_path)
     
-    label_ds = BFSDataset(
-        'data/original/labels',
-        transforms=T,
-        paired=False,
-        return_pair=False
-    )
-
-    pred_ds = BFSDataset(
-        'data/processed/predictions',
-        transforms=T,
-        paired=False,
-        return_pair=False
-    )
-
-    batch_size = 10
-    epochs = 10000
-    timesteps = 100
-
-    if True:
-        load_checkpoint = True
-        new_checkpoint = True
-        if load_checkpoint:
-            checkpoint_path = "./checkpoints/UNet_128x128_bs10_t100_v1_e1000.ckpt"
-        else:
-            checkpoint_path = None
-        if new_checkpoint:
-            new_checkpoint_path = f"./checkpoints/UNet_{TARGET_SIZE[0]}x{TARGET_SIZE[1]}_bs{batch_size}_t{timesteps}_v1"
-        else:
-            new_checkpoint_path = None
-
-        bfs = BFSDiffusionModel(train_dataset=label_ds,
-                                batch_size=batch_size,
-                                num_timesteps=timesteps,
-                                checkpoint=checkpoint_path)
-        
-        bfs.train(epochs=epochs, checkpoint_path=new_checkpoint_path)
+    bfs.train(epochs=cfg.epochs, save_model=cfg.save_model)
 
 
 

@@ -6,7 +6,8 @@ from model.DiffusionModel import DiffusionModel
 class BFSDiffusionModel():
         
     def __init__(self,
-                train_dataset=None,
+                dataset=None,
+                image_size=None,
                 batch_size=None,
                 valid_dataset=None,
                 num_timesteps=None,
@@ -14,21 +15,28 @@ class BFSDiffusionModel():
                 checkpoint=None):
         
         super().__init__()
+        
+        print("Initializing BFS-DifussinModel -------")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print("\nDevice:", self.device, "//", torch.cuda.get_device_name(0), "\n")
 
-        self.train_dataset = train_dataset
-        self.valid_dataset = valid_dataset
+        self.dataset = dataset
         self.lr = lr
+        self.image_size = image_size
         self.batch_size = batch_size
 
         self.optimizer = "ADAM"
         self.loss = "loss"
 
-        self.model = DiffusionModel(num_timesteps=num_timesteps, checkpoint=checkpoint)
+        self.model = DiffusionModel(batch_size=self.batch_size, 
+                                    image_size=self.image_size, 
+                                    num_timesteps=num_timesteps, 
+                                    checkpoint=checkpoint, 
+                                    device=self.device)
     
     @torch.no_grad()
-    def forward(self, *args, **kwargs):
-        # return self.output_T(self.model(*args, **kwargs))
-        return self.model(*args, **kwargs)
+    def forward(self, batch_input):
+        return self.model(batch_input)
     
     def input_T(self, input):
         # By default, let the model accept samples in [0,1] range, and transform them automatically
@@ -38,24 +46,15 @@ class BFSDiffusionModel():
         # Inverse transform of model output from [-1,1] to [0,1] range
         return (input.add_(1)).div_(2)
     
-    def train_dataloader(self):
-        return DataLoader(self.train_dataset,
+    def dataloader(self):
+        return DataLoader(self.dataset,
                           batch_size=self.batch_size,
                           shuffle=True,
                           num_workers=1)
     
-    def val_dataloader(self):
-        if self.valid_dataset is not None:
-            return DataLoader(self.valid_dataset,
-                              batch_size=self.batch_size,
-                              shuffle=False,
-                              num_workers=1)
-        else:
-            return None
+    def train(self, epochs, save_model=False):
+        data_loader = self.dataloader()
+        self.model.train(epochs, data_loader, save_model=save_model)
     
-    def train(self, epochs, checkpoint_path=None):
-        data_loader = self.train_dataloader()
-        self.model.train(epochs, data_loader, checkpoint_path=checkpoint_path)
-    
-    def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
+    def __call__(self, batch_input=None):
+        return self.forward(batch_input)
