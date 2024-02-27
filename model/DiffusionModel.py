@@ -109,9 +109,9 @@ class DiffusionModel(nn.Module):
                 t = torch.randint(0, self.num_timesteps, (b,), device=self.device).long()
 
                 label_xt, label_noise = self.forward_process(label, t, return_noise=True)
-                # pred_xt, pred_noise = self.forward_process(pred, t, return_noise=True)
+                pred_xt, pred_noise = self.forward_process(pred, t, return_noise=True)
 
-                model_input = label_xt.to(self.device)
+                model_input = pred_xt.to(self.device)
                 # noise = noise.to(self.device)
 
                 noise_prediction = self.network(model_input, t)
@@ -125,7 +125,7 @@ class DiffusionModel(nn.Module):
                 loss_epoch.append(loss.item())
             
             avg_loss_epoch = sum(loss_epoch) / len(loss_epoch)
-            print("Epoch", epoch, "//", avg_loss_epoch)
+            print("Epoch", epoch, "// Loss", avg_loss_epoch)
 
             if save_model:
                 if epoch % 100 == 0:
@@ -134,7 +134,7 @@ class DiffusionModel(nn.Module):
                         'model_state_dict': self.network.state_dict(),
                         'optimizer_state_dict': self.optimizer.state_dict(),
                     }
-                    new_checkpoint_path = f"./checkpoints/BaselineLabel2/UNet_{self.image_size[0]}x{self.image_size[1]}_bs{self.batch_size}_t{self.num_timesteps}_v2"
+                    new_checkpoint_path = f"./checkpoints/BaselineLabelPred2/UNet_{self.image_size[0]}x{self.image_size[1]}_bs{self.batch_size}_t{self.num_timesteps}_v2"
                     torch.save(checkpoint, f"{new_checkpoint_path}_e{epoch}.ckpt")
                     print(f"Model saved at epoch {epoch}")
 

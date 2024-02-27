@@ -142,12 +142,12 @@ if __name__ == "__main__":
         checkpoint_path = f"./checkpoints/BaselineLabel/UNet_128x128_bs10_t100_v1_e10000.ckpt"
         timesteps = 100
     elif args.model == "baseline2":
-        meta = {"model_name": "Baseline2", "epochs": 10000}
-        checkpoint_path = f"./checkpoints/BaselineLabelPred/UNet_128x128_bs5_t100_v1_e10000.ckpt"
+        meta = {"model_name": "Baseline2", "epochs": 100}
+        checkpoint_path = f"./checkpoints/BaselineLabelPred2/UNet_256x256_bs5_t100_v2_e{meta['epochs']}.ckpt"
         timesteps = 100
     elif args.model == "baseline3":
-        meta = {"model_name": "Baseline3", "epochs": 500}
-        checkpoint_path = f"./checkpoints/BaselineLabel2/UNet_256x256_bs10_t100_v2_e500.ckpt"
+        meta = {"model_name": "Baseline3", "epochs": 1000}
+        checkpoint_path = f"./checkpoints/BaselineLabel2/UNet_256x256_bs10_t100_v2_e{meta['epochs']}.ckpt"
         timesteps = 100
 
     bfs_model = BFSDiffusionModel(num_timesteps=timesteps, checkpoint=checkpoint_path)
