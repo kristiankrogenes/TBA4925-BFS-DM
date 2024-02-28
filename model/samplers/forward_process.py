@@ -7,6 +7,7 @@
     1) Gaussian Diffusion
 
 """
+import os
 import torch
 from torch import nn
 
@@ -89,7 +90,7 @@ class GaussianForwardProcess(ForwardModel):
             return output, noise
     
     @torch.no_grad()
-    def step(self, x_t, t, return_noise=False):
+    def step(self, x_t, t, return_noise=False, sample_path=None):
         """
             Get next sample in the process
             
@@ -103,8 +104,15 @@ class GaussianForwardProcess(ForwardModel):
         noise = torch.randn_like(x_t)
         output = mean + std * noise
 
-        input_d = transform_model_output_to_image(output[0].detach().cpu())
-        input_d.save(f"./ii/din{t}.png", format="PNG")               
+        if sample_path is not None:
+            folder_path = os.path.join("./gaussian_samples/cosine/", sample_path)
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+            if t == 0:
+                input_sample = transform_model_output_to_image(x_t[0].detach().cpu())
+                input_sample.save(f"{folder_path}/diffused_sample_t{t}.png", format="PNG") 
+            diffused_sample = transform_model_output_to_image(output[0].detach().cpu())
+            diffused_sample.save(f"{folder_path}/diffused_sample_t{t+1}.png", format="PNG")           
         
         if not return_noise:
             return output

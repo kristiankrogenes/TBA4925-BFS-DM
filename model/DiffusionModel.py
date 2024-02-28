@@ -18,7 +18,7 @@ class DiffusionModel(nn.Module):
                 generated_channels=1,
                 loss_fn=F.mse_loss,
                 learning_rate=1e-3,
-                schedule="linear",
+                schedule="cosine",
                 num_timesteps=1000,
                 sampler=None,
                 checkpoint=None,
@@ -95,8 +95,9 @@ class DiffusionModel(nn.Module):
 
         for epoch in range(self.start_epoch, epochs+1):
             loss_epoch = []
+            batch_count = 0
             for batch in tqdm(data_loader, desc=f"Epoch {epoch} - Diffusion Training"):
-
+                batch_count += 1
                 # b, c, h, w = batch.shape
                 label, pred = batch
                 # print(label.shape, pred.shape)
@@ -108,8 +109,12 @@ class DiffusionModel(nn.Module):
 
                 t = torch.randint(0, self.num_timesteps, (b,), device=self.device).long()
 
-                label_xt, label_noise = self.forward_process(label, t, return_noise=True)
-                pred_xt, pred_noise = self.forward_process(pred, t, return_noise=True)
+                # label_xt, label_noise = self.forward_process(label, t, return_noise=True)
+                # pred_xt, pred_noise = self.forward_process(pred, t, return_noise=True)
+                for ti in range(self.num_timesteps):
+                    # x_t = self.forward_process.step(batch_input, i)
+                    label_xt, label_noise = self.forward_process.step(label, ti, return_noise=True)
+                    pred_xt, pred_noise = self.forward_process.step(pred, ti, return_noise=True, sample_path=f"pred/e{epoch}/b{batch_count}/")
 
                 model_input = pred_xt.to(self.device)
                 # noise = noise.to(self.device)
