@@ -6,3 +6,4 @@ Jupyter Slurm Connection:
 
 IDUN Modules:
     module load Python/3.10.4-GCCcore-11.3.0
+    
