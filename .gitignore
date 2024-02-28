@@ -2,6 +2,7 @@ __pycache__/
 
 Balsfjord/
 trondheim/
+trondheim_data/
 data_processing.py
 checkpoints/
 data_processing.py
