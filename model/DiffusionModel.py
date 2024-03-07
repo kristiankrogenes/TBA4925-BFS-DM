@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,12 +6,8 @@ from tqdm import tqdm
 
 from model.samplers.forward_process import GaussianForwardProcess
 from model.samplers.DDPM import DDPMSampler
-from model.network.DMUNet import UnetConvNextBlock
 from model.network.SimpleUnet import SimpleUnet
-from utils.utils import transform_model_output_to_image
-
-from PIL import Image
-import numpy as np
+from utils.utils import transform_model_output_to_image, add_row_to_csv
 
 class DiffusionModel(nn.Module):
 
@@ -18,8 +15,8 @@ class DiffusionModel(nn.Module):
                 generated_channels=1,
                 loss_fn=F.mse_loss,
                 learning_rate=1e-3,
-                schedule="cosine",
-                num_timesteps=1000,
+                schedule=None,
+                num_timesteps=None,
                 sampler=None,
                 checkpoint=None,
                 device="cpu", 
@@ -38,91 +35,88 @@ class DiffusionModel(nn.Module):
         self.loss_fn = loss_fn
 
         self.forward_process = GaussianForwardProcess(num_timesteps=self.num_timesteps, schedule=schedule)
-        self.forward_process.to(self.device)
 
-        # self.network = UnetConvNextBlock(dim=64,
-        #                                 dim_mults=(1,2,4,8),
-        #                                 channels=self.generated_channels,
-        #                                 out_dim=self.generated_channels,
-        #                                 with_time_emb=True)
         self.network = SimpleUnet()
-        self.network = self.network.to(self.device)
+        self.network.to(self.device)
         
         self.optimizer = torch.optim.AdamW(self.network.parameters(), lr=learning_rate)
 
         self.sampler = DDPMSampler(num_timesteps=self.num_timesteps) if sampler is None else sampler
-        self.sampler = self.sampler.to(self.device)
 
-        self.start_epoch = 1
         if checkpoint is not None:
             ckpt = torch.load(checkpoint)
             self.network.load_state_dict(ckpt["model_state_dict"])
             self.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-            self.start_epoch = ckpt["epoch"]
 
 
     @torch.no_grad()
     def forward(self, batch_input=None):
-        
-        b, h, w = 1, 128, 128
 
-        # 1. Create initial noise with Gaussian Forward Process
         if not batch_input is None:
-            batch_input = batch_input.to(self.device)
-            # x_t = self.forward_process(batch_input, self.num_timesteps-1)
-            for i in range(self.num_timesteps):
-                x_t = self.forward_process.step(batch_input, i)
+            x_t = batch_input.to(self.device)
+            x_t = self.forward_process(batch_input, self.num_timesteps)
         else:
-            x_t = torch.randn([b, self.generated_channels, h, w], device=self.device)
+            x_t = torch.randn([1, self.generated_channels, self.image_size, self.image_size], device=self.device)
 
-        # 2. Denoising image, step-by-step
         it = reversed(range(0, self.num_timesteps))
         for i in tqdm(it, desc='Diffusion Sampling', total=self.num_timesteps):
 
-            t = torch.full((b,), i, device=self.device, dtype=torch.long)
+            t = torch.full((1,), i, device=self.device, dtype=torch.long)
 
-            if (i % 10 == 0 or i in [100, 99, 98, 97, 96, 95, 94, 93, 92, 91]) and False:
-                xt_tensor = x_t.detach().cpu()
-                outs = transform_model_output_to_image(xt_tensor[0])
+            z_t = self.network(x_t, t)
+            x_t = self.sampler(x_t, t, z_t)
+
+            # -------------------------------------------------------------------------------
+            if i % 10 == 0 and False:
+                zt_tensor = z_t.detach().cpu()
+                clamped_zt = torch.clamp(zt_tensor, min=-1.0, max=1.0)
+                outs = transform_model_output_to_image(clamped_zt[0])
                 outs.save(f"./ii/out{i}.png", format="PNG")
-
-            z_t = self.network(x_t, t)          # prediction of noise
-            x_t = self.sampler(x_t, t, z_t)     # prediction of next state
+            # -------------------------------------------------------------------------------
             
-        return torch.clamp(x_t, -1.0, 1.0)
+        return torch.clamp(x_t, min=-1.0, max=1.0)
 
-    def train(self, epochs, data_loader, save_model=False):
+    def train(self, start_epoch, epochs, data_loader, parameterization="eps", save_model=False):
 
-        for epoch in range(self.start_epoch, epochs+1):
+        for epoch in range(start_epoch, epochs+1):
             loss_epoch = []
-            batch_count = 0
-            for batch in tqdm(data_loader, desc=f"Epoch {epoch} - Diffusion Training"):
-                batch_count += 1
-                # b, c, h, w = batch.shape
-                label, pred = batch
-                # print(label.shape, pred.shape)
+            for bi, batch in enumerate(tqdm(data_loader, desc=f"Epoch {epoch} - Diffusion Training")):
+
+                label, x_0 = batch
                 
                 b, c, h, w = label.shape
                 
                 label = label.to(self.device)
-                pred = pred.to(self.device)
+                x_0 = x_0.to(self.device)
 
                 t = torch.randint(0, self.num_timesteps, (b,), device=self.device).long()
 
-                # label_xt, label_noise = self.forward_process(label, t, return_noise=True)
-                # pred_xt, pred_noise = self.forward_process(pred, t, return_noise=True)
-                for ti in range(self.num_timesteps):
-                    # x_t = self.forward_process.step(batch_input, i)
-                    label_xt, label_noise = self.forward_process.step(label, ti, return_noise=True)
-                    pred_xt, pred_noise = self.forward_process.step(pred, ti, return_noise=True, sample_path=f"pred/e{epoch}/b{batch_count}/")
+                x_t, noise = self.forward_process(x_0, t, return_noise=True)
+                x_t = x_t.to(self.device)
 
-                model_input = pred_xt.to(self.device)
-                # noise = noise.to(self.device)
+                z_t = self.network(x_t, t)
 
-                noise_prediction = self.network(model_input, t)
+                if parameterization == "eps":
+                    target = noise
+                elif parameterization == "x0":
+                    target = label
+                elif parameterization == "v":
+                    raise NotImplementedError(f"Parameterization {parameterization} not yet supported")
+                else:
+                    raise ValueError(f"Training parameterization {parameterization} not valid.")
 
-                loss = self.loss_fn(noise_prediction, label_noise)
+                clamped_zt = torch.clamp(z_t, min=-1.0, max=1.0)
+                loss = self.loss_fn(target, clamped_zt)
+                
 
+                # -------------------------------------------------------------------------------
+                if epoch % 50 == 0 and False:
+                    prediction_image = transform_model_output_to_image(clamped_zt[0].detach().cpu())
+                    if not os.path.exists(f"ii/tester/epoch_{epoch}"):
+                        os.makedirs(f"ii/tester/epoch_{epoch}")
+                    prediction_image.save(f"ii/tester/epoch_{epoch}/training_prediction_from_batch_{bi}.png", format="PNG") 
+                # -------------------------------------------------------------------------------
+                    
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
@@ -132,16 +126,28 @@ class DiffusionModel(nn.Module):
             avg_loss_epoch = sum(loss_epoch) / len(loss_epoch)
             print("Epoch", epoch, "// Loss", avg_loss_epoch)
 
+            add_row_to_csv("./loss_metrics.csv", [epoch, avg_loss_epoch])
+
             if save_model:
-                if epoch % 100 == 0:
+                if epoch % 50 == 0:
                     checkpoint = {
-                        'epoch': epoch,
-                        'model_state_dict': self.network.state_dict(),
-                        'optimizer_state_dict': self.optimizer.state_dict(),
+                        "epoch": epoch,
+                        "model_state_dict": self.network.state_dict(),
+                        "optimizer_state_dict": self.optimizer.state_dict(),
                     }
-                    new_checkpoint_path = f"./checkpoints/BaselineLabelPred2/UNet_{self.image_size[0]}x{self.image_size[1]}_bs{self.batch_size}_t{self.num_timesteps}_v2"
-                    torch.save(checkpoint, f"{new_checkpoint_path}_e{epoch}.ckpt")
-                    print(f"Model saved at epoch {epoch}")
+
+                    folder_path = f"./checkpoints/{save_model}/"
+                    model_name = f"UNet_{self.image_size[0]}x{self.image_size[1]}_bs{self.batch_size}_t{self.num_timesteps}_e{epoch}.ckpt"
+
+                    if not os.path.exists(folder_path):
+                        os.makedirs(folder_path)
+
+                    new_checkpoint_path = os.path.join(folder_path, model_name)
+
+                    torch.save(checkpoint, new_checkpoint_path)
+                    print(f"Model saved at epoch {epoch}.")
+
+    
 
 
 
