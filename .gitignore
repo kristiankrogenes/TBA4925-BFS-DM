@@ -10,3 +10,5 @@ test.py
 
 inference/
 gaussian_samples/
+
+scripts/*.out
