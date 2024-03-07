@@ -10,15 +10,16 @@ class BFSDiffusionModel():
                 image_size=None,
                 batch_size=None,
                 valid_dataset=None,
+                schedule=None,
                 num_timesteps=None,
                 lr=1e-3,
                 checkpoint=None):
         
         super().__init__()
         
-        print("Initializing BFS-DifussinModel -------")
+        print("\n------- Initializing BFS-DiffusionModel -------")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print("\nDevice:", self.device, "//", torch.cuda.get_device_name(0), "\n")
+        print("\nDevice:", self.device, "//", torch.cuda.get_device_name(0))
 
         self.dataset = dataset
         self.lr = lr
@@ -29,7 +30,8 @@ class BFSDiffusionModel():
         self.loss = "loss"
 
         self.model = DiffusionModel(batch_size=self.batch_size, 
-                                    image_size=self.image_size, 
+                                    image_size=self.image_size,
+                                    schedule=schedule, 
                                     num_timesteps=num_timesteps, 
                                     checkpoint=checkpoint, 
                                     device=self.device)
@@ -52,9 +54,10 @@ class BFSDiffusionModel():
                           shuffle=True,
                           num_workers=1)
     
-    def train(self, epochs, save_model=False):
+    def train(self, start_epoch, epochs, parameterization, save_model=False):
+        print("\nStarting training...")
         data_loader = self.dataloader()
-        self.model.train(epochs, data_loader, save_model=save_model)
+        self.model.train(start_epoch, epochs, data_loader, parameterization, save_model=save_model)
     
     def __call__(self, batch_input=None):
         return self.forward(batch_input)
