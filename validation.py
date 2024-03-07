@@ -7,31 +7,7 @@ from torch.utils.data import DataLoader
 
 from dataset import BFSDataset
 from model.BFSDiffusionModel import BFSDiffusionModel
-from utils.utils import transform_model_output_to_image
-
-import csv
-
-def save_dict_to_csv(dictionary, file_path):
-    with open(file_path, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=dictionary.keys())
-        writer.writeheader()
-        writer.writerow(dictionary)
-
-def add_row_to_csv(file_path, new_row):
-
-    existing_data = []
-    with open(file_path, "r", newline="") as csvfile:
-        reader = csv.reader(csvfile)
-        header = next(reader)
-        existing_data.append(header)
-        for row in reader:
-            existing_data.append(row)
-
-    existing_data.append(new_row)
-
-    with open(file_path, "w", newline="") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerows(existing_data)
+from utils.utils import transform_model_output_to_image, add_row_to_csv
 
 def calculate_metrics(preds, labels, verbose=False):
 
