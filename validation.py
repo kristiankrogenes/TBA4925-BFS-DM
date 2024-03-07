@@ -1,3 +1,4 @@
+import os
 import argparse
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, jaccard_score
 import torch
@@ -93,7 +94,11 @@ def run_inference(model, dataset, meta_data, save_metrics=True, save_outputs=Tru
 
         if save_outputs:
             generated_image = transform_model_output_to_image(generated_tensor[0])
-            generated_image.save(f"./inference/baseline_2/{dataset.label_files[i]}", format="PNG")
+
+            if not os.path.exists(f"./inference/{meta_data['model_name']}"):
+                os.makedirs(f"./inference/{meta_data['model_name']}")
+
+            generated_image.save(f"./inference/{meta_data['model_name']}/{dataset.label_files[i]}", format="PNG")
 
         if save_metrics:
 
@@ -106,6 +111,8 @@ def run_inference(model, dataset, meta_data, save_metrics=True, save_outputs=Tru
             average_iou.append(metrics["IoU"])
             
         print("Inference", i)
+        if i==4:
+            break
 
     if save_metrics:
         final_metrics = {"Model": meta_data["model_name"], 
@@ -133,9 +140,6 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, help="Which model to check.")
     args = parser.parse_args()
     # ==================================================================================================
-
-    if args.model not in ["baseline", "baseline2", "baseline3"]:
-        raise ValueError("This model does not exist.")
     
     if args.model == "baseline":
         meta = {"model_name": "Baseline", "epochs": 10000}
@@ -149,6 +153,20 @@ if __name__ == "__main__":
         meta = {"model_name": "Baseline3", "epochs": 1000}
         checkpoint_path = f"./checkpoints/BaselineLabel2/UNet_256x256_bs10_t100_v2_e{meta['epochs']}.ckpt"
         timesteps = 100
+    elif args.model == "outputloss":
+        meta = {"model_name": "OutputLoss2", "epochs": 5750}
+        checkpoint_path = f"./checkpoints/{meta['model_name']}/UNet_128x128_bs16_t100_e{meta['epochs']}.ckpt"
+        timesteps = 100
+    elif args.model == "prebaseoutput":
+        meta = {"model_name": "PreBaseOutput", "epochs": 20000}
+        checkpoint_path = f"./checkpoints/{meta['model_name']}/UNet_128x128_bs16_t100_e{meta['epochs']}.ckpt"
+        timesteps = 1000
+    elif args.model == "prebaseoutputextended":
+        meta = {"model_name": "PreBaseOutputExtended", "epochs": 50}
+        checkpoint_path = f"./checkpoints/{meta['model_name']}/UNet_128x128_bs16_t100_e{meta['epochs']}.ckpt"
+        timesteps = 100
+    else:
+        raise ValueError("This model does not exist.")
 
     bfs_model = BFSDiffusionModel(num_timesteps=timesteps, checkpoint=checkpoint_path)
 
