@@ -63,7 +63,7 @@ def add_row_to_csv(file_path, new_row):
         writer.writerows(existing_data)
 
 
-def check_parameters_for_training(epochs, size, batch_size, timesteps, model_path, save_model):
+def check_parameters_for_training(epochs, size, batch_size, timesteps, parameterization, model_path, save_model):
     if epochs == None or epochs < 1:
         raise ValueError("Number of epochs must be given and be a positive number.")
     elif size < 1:
@@ -71,7 +71,9 @@ def check_parameters_for_training(epochs, size, batch_size, timesteps, model_pat
     elif batch_size < 1:
         raise ValueError("Batch size must be positive.")
     elif timesteps < 1:
-        raise ValueError("Number of timesteps must be positive.")    
+        raise ValueError("Number of timesteps must be positive.")
+    elif not parameterization in ["eps", "x0", "v"]:
+        raise ValueError("Type of parameterization is not valid.")  
     elif not model_path==None and not os.path.exists(model_path):
         raise ValueError("Model requested does not exist.")
     elif save_model in os.listdir("./checkpoints") and model_path is None:

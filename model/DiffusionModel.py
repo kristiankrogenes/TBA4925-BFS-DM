@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from model.samplers.forward_process import GaussianForwardProcess
 from model.samplers.DDPM import DDPMSampler
+from model.network.DMUNet import UnetConvNextBlock
 from model.network.SimpleUnet import SimpleUnet
 from utils.utils import transform_model_output_to_image, add_row_to_csv
 
@@ -36,7 +37,12 @@ class DiffusionModel(nn.Module):
 
         self.forward_process = GaussianForwardProcess(num_timesteps=self.num_timesteps, schedule=schedule)
 
-        self.network = SimpleUnet()
+        self.network = UnetConvNextBlock(dim=64,
+                                        dim_mults=(1, 2, 4, 8),
+                                        channels=self.generated_channels,
+                                        out_dim=self.generated_channels,
+                                        with_time_emb=True)
+        # self.network = SimpleUnet()
         self.network.to(self.device)
         
         self.optimizer = torch.optim.AdamW(self.network.parameters(), lr=learning_rate)
