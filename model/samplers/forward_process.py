@@ -1,118 +1,69 @@
-"""
-
-    This file contains implementations of the forward diffusion process
-
-    Current Models:
-    
-    1) Gaussian Diffusion
-
-"""
 import os
 import torch
 from torch import nn
 
 from model.samplers.beta_schedules import *
-
 from utils.utils import transform_model_output_to_image
-
-class ForwardModel(nn.Module):
-    """
-        (Forward Model Template)
-    """
+        
+class GaussianForwardProcess(nn.Module):
     
-    def __init__(self,
-                 num_timesteps=1000,
-                 schedule='linear'
-                ):
+    def __init__(self, num_timesteps=None, schedule=None):
         
         super().__init__()
-        self.schedule=schedule
-        self.num_timesteps=num_timesteps
+
+        self.num_timesteps = num_timesteps if not num_timesteps is None else 1000
+        self.schedule = schedule if not schedule is None else "linear"
+
+        self.betas = get_beta_schedule(self.schedule, self.num_timesteps)
+        self.betas_sqrt = self.betas.sqrt()
+        self.alphas = 1 - self.betas
+        self.alphas_sqrt = self.alphas.sqrt()
+        self.alphas_cumprod = torch.cumprod(self.alphas, 0)
+        self.alphas_cumprod_sqrt = self.alphas_cumprod.sqrt()
+        self.alphas_one_minus_cumprod_sqrt = (1 - self.alphas_cumprod).sqrt()
      
     @torch.no_grad()
-    def forward(self, x_0, t):
-        """
-            Get noisy sample at t given x_0
-        """
-        raise NotImplemented
-    
-    @torch.no_grad()
-    def step(self, x_t, t):
-        """
-            Get next sample in the process
-        """
-        raise NotImplemented   
+    def forward(self, x0, t, return_noise=False):
+
+        self.alphas_cumprod_sqrt = self.alphas_cumprod_sqrt.to(x0.device)
+        self.alphas_one_minus_cumprod_sqrt = self.alphas_one_minus_cumprod_sqrt.to(x0.device)
+        
+        b = x0.shape[0]
         
 
-class GaussianForwardProcess(ForwardModel):
-    """
-        Gassian Forward Model
-    """
-    
-    def __init__(self,
-                 num_timesteps=1000,
-                 schedule='linear'
-                ):
+        mean = x0 * self.alphas_cumprod_sqrt[t].view(b, 1, 1, 1)
+        std = self.alphas_one_minus_cumprod_sqrt[t].view(b, 1, 1, 1)
         
-        super().__init__(num_timesteps=num_timesteps,
-                         schedule=schedule
-                        )
-        
-        # get process parameters
-        self.register_buffer('betas', get_beta_schedule(self.schedule,self.num_timesteps))
-        self.register_buffer('betas_sqrt', self.betas.sqrt())
-        self.register_buffer('alphas', 1-self.betas) 
-        self.register_buffer('alphas_cumprod', torch.cumprod(self.alphas, 0))
-        self.register_buffer('alphas_cumprod_sqrt', self.alphas_cumprod.sqrt())
-        self.register_buffer('alphas_one_minus_cumprod_sqrt', (1-self.alphas_cumprod).sqrt())
-        self.register_buffer('alphas_sqrt', self.alphas.sqrt())
-     
-    @torch.no_grad()
-    def forward(self, x_0, t, return_noise=False):
-        """
-            Get noisy sample at t given x_0
-            
-            q(x_t | x_0)=N(x_t; alphas_cumprod_sqrt(t)*x_0, 1-alpha_cumprod(t)*I)
-        """
-        # assert (t < self.num_timesteps).all
+        noise = torch.randn_like(x0)
 
-        b=x_0.shape[0]
-
-        mean = x_0 * self.alphas_cumprod_sqrt[t].view(b, 1, 1, 1)
-        std = self.alphas_one_minus_cumprod_sqrt[t].view(b,1,1,1)
-        
-        noise = torch.randn_like(x_0)
-        output = mean + std * noise
+        xt = mean + std * noise
         
         if not return_noise:
-            return output
+            return xt
         else:
-            return output, noise
+            return xt, noise
     
     @torch.no_grad()
     def step(self, x_t, t, return_noise=False, sample_path=None):
-        """
-            Get next sample in the process
-            
-            q(x_t | x_t-1)=N(x_t; alphas_sqrt(t)*x_0,betas(t)*I)
-        """
-        # assert (t<self.num_timesteps).all()
         
         mean = self.alphas_sqrt[t] * x_t
         std = self.betas_sqrt[t]
-        
+
         noise = torch.randn_like(x_t)
+
         output = mean + std * noise
 
         if sample_path is not None:
-            folder_path = os.path.join("./gaussian_samples/cosine/", sample_path)
+            folder_path = os.path.join(f"./gaussian_samples/{self.schedule}/", sample_path)
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
             if t == 0:
                 input_sample = transform_model_output_to_image(x_t[0].detach().cpu())
-                input_sample.save(f"{folder_path}/diffused_sample_t{t}.png", format="PNG") 
-            diffused_sample = transform_model_output_to_image(output[0].detach().cpu())
-            diffused_sample.save(f"{folder_path}/diffused_sample_t{t+1}.png", format="PNG")           
+                input_sample.save(f"{folder_path}/input_sample_t{t}.png", format="PNG") 
+            if t % 10 == 0:
+                clamped_output = torch.clamp(output, min=-1.0, max=1.0)
+                diffused_sample = transform_model_output_to_image(clamped_output[0].detach().cpu())
+                diffused_sample.save(f"{folder_path}/diffused_sample_t{t}.png", format="PNG")           
         
         if not return_noise:
             return output
