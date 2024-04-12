@@ -12,3 +12,5 @@ inference/
 gaussian_samples/
 
 scripts/*.out
+
+ddpm-seg/
