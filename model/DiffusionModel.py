@@ -40,7 +40,7 @@ class DiffusionModel(nn.Module):
 
         self.network = UnetConvNextBlock(dim=64,
                                         dim_mults=(1, 2, 4, 8),
-                                        channels=self.generated_channels + 1,
+                                        channels=self.generated_channels+4,
                                         out_dim=self.generated_channels,
                                         with_time_emb=True)
         # self.network = SimpleUnet()
@@ -103,19 +103,20 @@ class DiffusionModel(nn.Module):
             loss_epoch = []
             for bi, batch in enumerate(tqdm(data_loader, desc=f"Epoch {epoch} - Diffusion Training")):
 
-                label, x_0 = batch
+                label, x_0, orto = batch
                 
                 b, c, h, w = label.shape
                 
                 label = label.to(self.device)
                 x_0 = x_0.to(self.device)
+                orto = orto.to(self.device)
 
                 t = torch.randint(0, self.num_timesteps, (b,), device=self.device).long()
 
                 x_t, noise = self.forward_process(label, t, return_noise=True)
                 x_t = x_t.to(self.device)
 
-                model_input = torch.cat([x_t, x_0], 1).to(self.device)
+                model_input = torch.cat([x_t, x_0, orto], 1).to(self.device)
 
                 z_t = self.network(model_input, t)
 

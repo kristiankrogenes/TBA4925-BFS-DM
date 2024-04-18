@@ -75,4 +75,16 @@ x0ConditionalCosine = CFG(
     # model_path="./checkpoints/x0Conditional/UNet_128x128_bs16_t1000_e8800.ckpt"
 )
 
-configs = [conditionalV2, x0Conditional, epsConditionalCosine, x0ConditionalCosine]
+epsOrtoConditionalCosine = CFG(
+    epochs=10000,
+    size=128,
+    batch_size=16,
+    timesteps=1000,
+    parameterization="eps",
+    schedule="cosine",
+    backbone=True,
+    model_name="epsOrtoConditionalCosine",
+    # model_path="./checkpoints/x0Conditional/UNet_128x128_bs16_t1000_e8800.ckpt"
+)
+
+configs = [conditionalV2, x0Conditional, epsConditionalCosine, x0ConditionalCosine, epsOrtoConditionalCosine]

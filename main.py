@@ -65,9 +65,10 @@ if __name__ == "__main__":
     # data_batch = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1)
 
     # for bi, batch in enumerate(data_batch):
-    #     if bi == 3:
-    #         label, x_0 = batch
-    #         x_t = label
-    #         for ti in range(1000):
-    #             x_t = fp.step(x_t, ti, return_noise=False, sample_path="33921_10912")
+    #     if bi == 0:
+    #         label, x_0, orto = batch
+    #         print(label.shape, x_0.shape, orto.shape)
+    #         # x_t = label
+    #         # for ti in range(1000):
+    #         #     x_t = fp.step(x_t, ti, return_noise=False, sample_path="33921_10912")
     #         break

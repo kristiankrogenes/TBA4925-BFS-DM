@@ -131,7 +131,7 @@ class UnetConvNextBlock(nn.Module):
         dim,
         out_dim = None,
         dim_mults=(1, 2, 4, 8),
-        channels = 3,
+        channels = None,
         with_time_emb = True,
         output_mean_scale = False,
         residual = False
