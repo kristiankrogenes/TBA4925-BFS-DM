@@ -52,15 +52,15 @@ class GaussianForwardProcess(nn.Module):
         noise = torch.randn_like(x_t)
 
         output = mean + std * noise
-
+        
         if sample_path is not None:
-            folder_path = os.path.join(f"./gaussian_samples/{self.schedule}/", sample_path)
+            folder_path = os.path.join(f"./outputs/forward/{self.schedule}/", sample_path)
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
             if t == 0:
                 input_sample = transform_model_output_to_image(x_t[0].detach().cpu())
                 input_sample.save(f"{folder_path}/input_sample_t{t}.png", format="PNG") 
-            if t % 10 == 0:
+            if t % 100 == 0 or t==999:
                 clamped_output = torch.clamp(output, min=-1.0, max=1.0)
                 diffused_sample = transform_model_output_to_image(clamped_output[0].detach().cpu())
                 diffused_sample.save(f"{folder_path}/diffused_sample_t{t}.png", format="PNG")           

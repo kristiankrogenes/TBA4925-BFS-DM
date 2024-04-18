@@ -42,3 +42,39 @@ def sigmoid_beta_schedule(timesteps):
     beta_end = 0.02
     betas = torch.linspace(-6, 6, timesteps)
     return torch.sigmoid(betas) * (beta_end - beta_start) + beta_start
+
+
+if __name__ == "__main__":
+
+    cosine = cosine_beta_schedule(1000)
+    linear = linear_beta_schedule(1000)
+
+    betas = linear
+    betas_sqrt = betas.sqrt()
+    alphas = 1 - betas
+    alphas_sqrt = alphas.sqrt()
+    alphas_cumprod = torch.cumprod(alphas, 0)
+    alphas_cumprod_sqrt = alphas_cumprod.sqrt()
+    alphas_one_minus_cumprod_sqrt = (1 - alphas_cumprod).sqrt()
+
+    x = [i for i in range(1000)]
+    y = alphas_cumprod.numpy()
+
+    if True:
+        import matplotlib.pyplot as plt
+        from PIL import Image
+        import io
+
+        plt.plot(x, y, color='red', linestyle='-')
+
+        plt.xlabel("Timesteps")
+        plt.ylabel("Alphsa Cumprod values")
+        plt.title("Linear Scheduler")
+
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+
+        image = Image.open(buffer)
+        
+        image.save('line_plot_pil.png')
