@@ -5,6 +5,46 @@ from torchvision import transforms
 import numpy as np
 from PIL import Image
 import csv
+import torch
+
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, jaccard_score
+def calculate_metrics(preds, labels, verbose=False):
+
+    average_accuracy = []
+    average_precision = []
+    average_recall = []
+    average_f1 = []
+    average_iou = []
+
+    for index, (pred, label) in enumerate(zip(preds, labels)):
+
+        pred[pred > 0] = 1
+        pred[pred <= 0] = 0
+        label[label > 0] = 1
+        label[label <= 0] = 0
+
+        pred_flat = pred.flatten()
+        label_flat = label.flatten()
+
+        accuracy = accuracy_score(label_flat, pred_flat)
+        precision = precision_score(label_flat, pred_flat, zero_division=0)
+        recall = recall_score(label_flat, pred_flat, zero_division=0)
+        f1 = f1_score(label_flat, pred_flat, zero_division=0)
+        iou = jaccard_score(label_flat, pred_flat, zero_division=0)
+
+        average_accuracy.append(accuracy)
+        average_precision.append(precision)
+        average_recall.append(recall)
+        average_f1.append(f1)
+        average_iou.append(iou)
+
+    if verbose:
+        print(f"Metrics for {preds.__len__()} predictions ===================")
+        print("Accuracy:", sum(average_accuracy) / max(1, len(average_accuracy)))
+        print("Precision:", sum(average_precision) / max(1, len(average_precision)))
+        print("Recall:", sum(average_recall) / max(1, len(average_recall)))
+        print("F1:", sum(average_f1) / max(1, len(average_f1)))
+        print("IoU:", sum(average_iou) / len(average_iou))
 
 def transform_model_output_to_image(out_tensor):
 
@@ -19,26 +59,42 @@ def transform_model_output_to_image(out_tensor):
     return reverse_transforms(out_tensor)
 
 def compare_inference_pred_label_orto(model, image_code):
-    if not model in os.listdir("./inference"):
+    if not model in os.listdir("./outputs/inference"):
         raise ValueError("No existing inference on this model.")
-    elif not f"{image_code}.png" in os.listdir(f"./inference/{model}"):
+    elif not f"{image_code}.png" in os.listdir(f"./outputs/inference/{model}"):
         raise ValueError("The model has not predicted this image code.") 
     
-    image1 = Image.open(f"./inference/{model}/{image_code}.png")
+    image1 = Image.open(f"./outputs/inference/{model}/{image_code}.png")
     image2 = Image.open(f"./data/processed/predictions/val/{image_code}.png")
     image3 = Image.open(f"./data/original/ortophotos/{image_code}.png")
     image4 = Image.open(f"./data/original/labels/val/{image_code}.png")
 
     width, height = image1.size
 
-    combined_image = Image.new('RGB', (2 * width, 2 * height))
+    image2 = image2.resize((width, height))
+    image3 = image3.resize((width, height))
+    image4 = image4.resize((width, height))
+
+    image1_array = np.asarray(image1)
+    image1_array_writable = image1_array.copy()
+    image1_tensor = torch.FloatTensor(image1_array_writable)
+    image1_tensor = image1_tensor / 255
+
+    image4_array = np.asarray(image4)
+    image4_array_writable = image4_array.copy()
+    image4_tensor = torch.FloatTensor(image4_array_writable)
+    image4_tensor = image4_tensor / 255
+
+    calculate_metrics(image1_tensor, image4_tensor, verbose=True)
+
+    combined_image = Image.new("RGB", (2 * width, 2 * height))
 
     combined_image.paste(image1, (0, 0))
     combined_image.paste(image2, (width, 0))
     combined_image.paste(image3, (0, height))
     combined_image.paste(image4, (width, height))
 
-    folder_path = os.path.join("./data/comparisons", model)
+    folder_path = os.path.join("./outputs/comparisons", model)
 
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
@@ -63,7 +119,7 @@ def add_row_to_csv(file_path, new_row):
         writer.writerows(existing_data)
 
 
-def check_parameters_for_training(epochs, size, batch_size, timesteps, parameterization, model_path, save_model):
+def check_parameters_for_training(epochs, size, batch_size, timesteps, parameterization, schedule, model_path, model_name):
     if epochs == None or epochs < 1:
         raise ValueError("Number of epochs must be given and be a positive number.")
     elif size < 1:
@@ -73,10 +129,12 @@ def check_parameters_for_training(epochs, size, batch_size, timesteps, parameter
     elif timesteps < 1:
         raise ValueError("Number of timesteps must be positive.")
     elif not parameterization in ["eps", "x0", "v"]:
-        raise ValueError("Type of parameterization is not valid.")  
+        raise ValueError("Type of parameterization is not valid.")
+    elif not schedule in ["linear", "cosine"]:
+        raise ValueError("Type of schedule is not valid.")  
     elif not model_path==None and not os.path.exists(model_path):
         raise ValueError("Model requested does not exist.")
-    elif save_model in os.listdir("./checkpoints") and model_path is None:
+    elif model_name in os.listdir("./checkpoints") and model_path is None:
         raise ValueError("Model already exists, choose another name.")
     return True
 
