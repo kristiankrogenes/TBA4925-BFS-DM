@@ -1,4 +1,5 @@
 import os
+import csv
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,7 +16,7 @@ class DiffusionModel(nn.Module):
     def __init__(self,
                 generated_channels=1,
                 loss_fn=F.mse_loss,
-                learning_rate=1e-3,
+                learning_rate=1e-4,
                 schedule=None,
                 num_timesteps=None,
                 sampler=None,
@@ -39,7 +40,7 @@ class DiffusionModel(nn.Module):
 
         self.network = UnetConvNextBlock(dim=64,
                                         dim_mults=(1, 2, 4, 8),
-                                        channels=self.generated_channels,
+                                        channels=self.generated_channels + 1,
                                         out_dim=self.generated_channels,
                                         with_time_emb=True)
         # self.network = SimpleUnet()
@@ -56,22 +57,36 @@ class DiffusionModel(nn.Module):
 
 
     @torch.no_grad()
-    def forward(self, batch_input=None):
+    def forward(self, batch_input=None, parameterization="eps"):
 
-        if not batch_input is None:
-            x_t = batch_input.to(self.device)
-            x_t = self.forward_process(batch_input, self.num_timesteps)
-        else:
-            x_t = torch.randn([1, self.generated_channels, self.image_size, self.image_size], device=self.device)
+        # if not batch_input is None:
+        #     x_t = batch_input.to(self.device)
+        #     x_t = self.forward_process(batch_input, self.num_timesteps)
+        # else:
+        #     x_t = torch.randn([1, self.generated_channels, self.image_size, self.image_size], device=self.device)
+        b, c, h, w = batch_input.shape
+        condition = batch_input.to(self.device)
+
+        x_t = torch.randn([b, c, h, w], device=self.device)
 
         it = reversed(range(0, self.num_timesteps))
         for i in tqdm(it, desc='Diffusion Sampling', total=self.num_timesteps):
 
             t = torch.full((1,), i, device=self.device, dtype=torch.long)
 
-            z_t = self.network(x_t, t)
-            x_t = self.sampler(x_t, t, z_t)
+            model_input = torch.cat([x_t, condition], 1).to(self.device)
 
+            z_t = self.network(model_input, t)
+
+            if parameterization == "eps":
+                x_t = self.sampler(x_t, t, z_t)
+            elif parameterization == "x0":
+                x_t = z_t
+            elif parameterization == "v":
+                raise NotImplementedError(f"Parameterization {parameterization} not yet supported")
+            else:
+                raise ValueError(f"Parameterization {parameterization} not valid.")
+           
             # -------------------------------------------------------------------------------
             if i % 10 == 0 and False:
                 zt_tensor = z_t.detach().cpu()
@@ -82,7 +97,7 @@ class DiffusionModel(nn.Module):
             
         return torch.clamp(x_t, min=-1.0, max=1.0)
 
-    def train(self, start_epoch, epochs, data_loader, parameterization="eps", save_model=False):
+    def train(self, start_epoch, epochs, data_loader, parameterization="eps", model_name=None):
 
         for epoch in range(start_epoch, epochs+1):
             loss_epoch = []
@@ -97,10 +112,12 @@ class DiffusionModel(nn.Module):
 
                 t = torch.randint(0, self.num_timesteps, (b,), device=self.device).long()
 
-                x_t, noise = self.forward_process(x_0, t, return_noise=True)
+                x_t, noise = self.forward_process(label, t, return_noise=True)
                 x_t = x_t.to(self.device)
 
-                z_t = self.network(x_t, t)
+                model_input = torch.cat([x_t, x_0], 1).to(self.device)
+
+                z_t = self.network(model_input, t)
 
                 if parameterization == "eps":
                     target = noise
@@ -110,9 +127,8 @@ class DiffusionModel(nn.Module):
                     raise NotImplementedError(f"Parameterization {parameterization} not yet supported")
                 else:
                     raise ValueError(f"Training parameterization {parameterization} not valid.")
-
-                clamped_zt = torch.clamp(z_t, min=-1.0, max=1.0)
-                loss = self.loss_fn(target, clamped_zt)
+                
+                loss = self.loss_fn(target, z_t)
                 
 
                 # -------------------------------------------------------------------------------
@@ -132,9 +148,15 @@ class DiffusionModel(nn.Module):
             avg_loss_epoch = sum(loss_epoch) / len(loss_epoch)
             print("Epoch", epoch, "// Loss", avg_loss_epoch)
 
-            add_row_to_csv("./loss_metrics.csv", [epoch, avg_loss_epoch])
+            metrics_path = f"./outputs/metrics/loss_metrics_{model_name}.csv"
+            if not os.path.exists(metrics_path):
+                # os.makedirs(metrics_path)
+                with open(metrics_path, "w", newline='') as csvfile:
+                    csvwriter = csv.writer(csvfile)
 
-            if save_model:
+            add_row_to_csv(metrics_path, [epoch, avg_loss_epoch])
+
+            if model_name:
                 if epoch % 50 == 0:
                     checkpoint = {
                         "epoch": epoch,
@@ -142,13 +164,13 @@ class DiffusionModel(nn.Module):
                         "optimizer_state_dict": self.optimizer.state_dict(),
                     }
 
-                    folder_path = f"./checkpoints/{save_model}/"
-                    model_name = f"UNet_{self.image_size[0]}x{self.image_size[1]}_bs{self.batch_size}_t{self.num_timesteps}_e{epoch}.ckpt"
+                    folder_path = f"./checkpoints/{model_name}/"
+                    checkpoint_name = f"UNet_{self.image_size[0]}x{self.image_size[1]}_bs{self.batch_size}_t{self.num_timesteps}_e{epoch}.ckpt"
 
                     if not os.path.exists(folder_path):
                         os.makedirs(folder_path)
 
-                    new_checkpoint_path = os.path.join(folder_path, model_name)
+                    new_checkpoint_path = os.path.join(folder_path, checkpoint_name)
 
                     torch.save(checkpoint, new_checkpoint_path)
                     print(f"Model saved at epoch {epoch}.")

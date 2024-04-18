@@ -31,14 +31,14 @@ class BFSDiffusionModel():
 
         self.model = DiffusionModel(batch_size=self.batch_size, 
                                     image_size=self.image_size,
-                                    schedule=schedule, 
+                                    schedule=schedule,
                                     num_timesteps=num_timesteps, 
                                     checkpoint=checkpoint, 
                                     device=self.device)
     
     @torch.no_grad()
-    def forward(self, batch_input):
-        return self.model(batch_input)
+    def forward(self, batch_input, parameterization):
+        return self.model(batch_input, parameterization)
     
     def input_T(self, input):
         # By default, let the model accept samples in [0,1] range, and transform them automatically
@@ -54,10 +54,10 @@ class BFSDiffusionModel():
                           shuffle=True,
                           num_workers=1)
     
-    def train(self, start_epoch, epochs, parameterization, save_model=False):
+    def train(self, start_epoch, epochs, parameterization, model_name=None):
         print("\nStarting training...")
         data_loader = self.dataloader()
-        self.model.train(start_epoch, epochs, data_loader, parameterization, save_model=save_model)
+        self.model.train(start_epoch, epochs, data_loader, parameterization, model_name=model_name)
     
-    def __call__(self, batch_input=None):
-        return self.forward(batch_input)
+    def __call__(self, batch_input=None, parameterization=None):
+        return self.forward(batch_input, parameterization)
