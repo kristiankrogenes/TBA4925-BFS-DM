@@ -1,60 +1,40 @@
-import re
 import argparse
 import kornia.augmentation as KA 
 
 from dataset import BFSDataset
 from model.BFSDiffusionModel import BFSDiffusionModel
 
-from utils.utils import check_parameters_for_training
-
-class CFG():
-
-    def __init__(self, epochs, size, batch_size, timesteps, parameterization, model_path=None, backbone=False, save_model=None, default=False):
-
-        if default:
-            self.start_epoch = 1
-            self.epochs = 1000
-            self.TARGET_SIZE = (128, 128)
-            self.batch_size = 8
-            self.timesteps = 100
-            self.parameterization = "eps"
-            self.model_path = None
-            self.save_model = save_model
-
-        elif check_parameters_for_training(epochs, size, batch_size, timesteps, parameterization, model_path, save_model):
-            self.start_epoch = 1 if backbone else int(re.search(r'e(\d+)\.ckpt', model_path).group(1))
-            self.epochs = epochs
-            self.TARGET_SIZE = (size, size)
-            self.batch_size = batch_size
-            self.timesteps = timesteps
-            self.parameterization = parameterization
-            self.model_path = model_path
-            self.save_model = save_model
-            
-        else:
-            raise ValueError("Something went wrong.")
+import model.config
 
 if __name__ == "__main__":
 
     # // ARGUMENT PARSER // ============================================================================
     parser = argparse.ArgumentParser(description="Parameters to train a Diffusion Model.")
-    parser.add_argument('--epochs', type=int, help="How many epochs the model will train on.")
-    parser.add_argument('--size', type=int, help="The size of the images during training.")
-    parser.add_argument('--batch_size', type=int, help="The batch size")
-    parser.add_argument('--timesteps', type=int, help="The number of timesteps.")
-    parser.add_argument('--parameterization', type=str, help="What type of parameterization to use during training.")
-    parser.add_argument('--model_path', type=str, help="The path of a model to continue training on.")
-    parser.add_argument('--backbone', type=str, help="Is it a backbone.")
-    parser.add_argument('--save_model', type=str, help="Should the model be saved or not. Write the name of your new model.")
-    parser.add_argument('--default', type=bool, help="Use the deafult config parameters.")
+    # parser.add_argument("--epochs", type=int, help="How many epochs the model will train on.")
+    # parser.add_argument("--size", type=int, help="The size of the images during training.")
+    # parser.add_argument("--batch_size", type=int, help="The batch size")
+    # parser.add_argument("--timesteps", type=int, help="The number of timesteps.")
+    # parser.add_argument("--parameterization", type=str, help="What type of parameterization to use during training.")
+    # parser.add_argument("--model_path", type=str, help="The path of a model to continue training on.")
+    # parser.add_argument("--backbone", type=str, help="Is it a backbone.")
+    # parser.add_argument("--save_model", type=str, help="Should the model be saved or not. Write the name of your new model.")
+    # parser.add_argument("--default", type=bool, help="Use the deafult config parameters.")
+    parser.add_argument("--config_name", type=str, help="What config to train.")
     args = parser.parse_args()
     # ==================================================================================================
 
-    cfg = CFG(args.epochs, args.size, args.batch_size, args.timesteps, args.parameterization, args.model_path, args.backbone, args.save_model, args.default)
+    cfg = None
+    for config in model.config.configs:
+        if args.config_name==config.model_name:
+            cfg = config
+    if cfg is None:
+        raise ValueError("This config does not exist.")
 
-    T = [
-        KA.Resize(size=cfg.TARGET_SIZE, antialias=True),
-        KA.RandomHorizontalFlip() 
+    T=[
+        # KA.RandomCrop((2*64,2*64)),
+        KA.Resize(cfg.TARGET_SIZE, antialias=True),
+        # KA.Resize((512, 512), antialias=True),
+        # KA.RandomVerticalFlip()
     ]
 
     train_dataset = BFSDataset(
@@ -72,8 +52,22 @@ if __name__ == "__main__":
     bfs = BFSDiffusionModel(dataset=train_dataset,
                             batch_size=cfg.batch_size,
                             image_size=cfg.TARGET_SIZE,
-                            schedule="linear",
+                            schedule=cfg.schedule,
                             num_timesteps=cfg.timesteps,
                             checkpoint=cfg.model_path)
     
-    bfs.train(start_epoch=cfg.start_epoch, epochs=cfg.epochs, parameterization=cfg.parameterization, save_model=cfg.save_model)
+    bfs.train(start_epoch=cfg.start_epoch, epochs=cfg.epochs, parameterization=cfg.parameterization, model_name=cfg.model_name)
+
+    # from model.samplers.forward_process import GaussianForwardProcess
+    # from torch.utils.data import DataLoader
+    # fp = GaussianForwardProcess(1000, "cosine")
+
+    # data_batch = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1)
+
+    # for bi, batch in enumerate(data_batch):
+    #     if bi == 3:
+    #         label, x_0 = batch
+    #         x_t = label
+    #         for ti in range(1000):
+    #             x_t = fp.step(x_t, ti, return_noise=False, sample_path="33921_10912")
+    #         break
