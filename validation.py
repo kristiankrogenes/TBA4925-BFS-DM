@@ -74,9 +74,11 @@ def run_inference(model, dataset, meta_data, save_metrics=True, save_outputs=Tru
 
     for i, data in enumerate(dataset):
 
-        label, pred = data
+        label, pred, orto = data
 
-        generated_tensor = model(batch_input=pred.unsqueeze(0), parameterization=meta_data["parameterization"])
+        # print(pred.unsqueeze(0).shape, orto.shape)
+
+        generated_tensor = model(batch_input=pred.unsqueeze(0), orto_input=orto.unsqueeze(0), parameterization=meta_data["parameterization"])
         generated_tensor = generated_tensor.detach().cpu()
 
         if save_outputs:

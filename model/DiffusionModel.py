@@ -57,7 +57,7 @@ class DiffusionModel(nn.Module):
 
 
     @torch.no_grad()
-    def forward(self, batch_input=None, parameterization="eps"):
+    def forward(self, batch_input=None, orto_input=None, parameterization="eps"):
 
         # if not batch_input is None:
         #     x_t = batch_input.to(self.device)
@@ -66,6 +66,7 @@ class DiffusionModel(nn.Module):
         #     x_t = torch.randn([1, self.generated_channels, self.image_size, self.image_size], device=self.device)
         b, c, h, w = batch_input.shape
         condition = batch_input.to(self.device)
+        orto = orto_input.to(self.device)
 
         x_t = torch.randn([b, c, h, w], device=self.device)
 
@@ -74,7 +75,7 @@ class DiffusionModel(nn.Module):
 
             t = torch.full((1,), i, device=self.device, dtype=torch.long)
 
-            model_input = torch.cat([x_t, condition], 1).to(self.device)
+            model_input = torch.cat([x_t, condition, orto], 1).to(self.device)
 
             z_t = self.network(model_input, t)
 

@@ -37,8 +37,8 @@ class BFSDiffusionModel():
                                     device=self.device)
     
     @torch.no_grad()
-    def forward(self, batch_input, parameterization):
-        return self.model(batch_input, parameterization)
+    def forward(self, batch_input, orto_input, parameterization):
+        return self.model(batch_input, orto_input, parameterization)
     
     def input_T(self, input):
         # By default, let the model accept samples in [0,1] range, and transform them automatically
@@ -59,5 +59,5 @@ class BFSDiffusionModel():
         data_loader = self.dataloader()
         self.model.train(start_epoch, epochs, data_loader, parameterization, model_name=model_name)
     
-    def __call__(self, batch_input=None, parameterization=None):
-        return self.forward(batch_input, parameterization)
+    def __call__(self, batch_input=None, orto_input=None, parameterization=None):
+        return self.forward(batch_input, orto_input, parameterization)

@@ -63,17 +63,17 @@ epsConditionalCosine = CFG(
     model_name="epsConditionalCosine",
 )
 
-x0ConditionalCosine = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="x0",
-    schedule="cosine",
-    backbone=True,
-    model_name="x0ConditionalCosine",
-    # model_path="./checkpoints/x0Conditional/UNet_128x128_bs16_t1000_e8800.ckpt"
-)
+# x0ConditionalCosine = CFG(
+#     epochs=10000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="x0",
+#     schedule="cosine",
+#     backbone=False,
+#     model_name="x0ConditionalCosine",
+#     model_path="./checkpoints/x0ConditionalCosine/UNet_128x128_bs16_t1000_e8800.ckpt"
+# )
 
 epsOrtoConditionalCosine = CFG(
     epochs=10000,
@@ -82,9 +82,28 @@ epsOrtoConditionalCosine = CFG(
     timesteps=1000,
     parameterization="eps",
     schedule="cosine",
-    backbone=True,
+    backbone=False,
     model_name="epsOrtoConditionalCosine",
-    # model_path="./checkpoints/x0Conditional/UNet_128x128_bs16_t1000_e8800.ckpt"
+    model_path="./checkpoints/epsOrtoConditionalCosine/UNet_128x128_bs16_t1000_e6500.ckpt"
 )
 
-configs = [conditionalV2, x0Conditional, epsConditionalCosine, x0ConditionalCosine, epsOrtoConditionalCosine]
+x0OrtoConditionalCosine = CFG(
+    epochs=10000,
+    size=128,
+    batch_size=16,
+    timesteps=1000,
+    parameterization="x0",
+    schedule="cosine",
+    backbone=False,
+    model_name="x0OrtoConditionalCosine",
+    model_path="./checkpoints/x0OrtoConditionalCosine/UNet_128x128_bs16_t1000_e4400.ckpt"
+)
+
+configs = [
+    conditionalV2, 
+    x0Conditional, 
+    epsConditionalCosine, 
+    # x0ConditionalCosine, 
+    epsOrtoConditionalCosine,
+    x0OrtoConditionalCosine
+]
