@@ -11,4 +11,4 @@
 #SBATCH --constraint=gpu32g
 
 module load Anaconda3/2022.10
-python main.py --config_name x0OrtoConditionalCosine
+python main.py --config_name epsOrtoConditionalSoftplus

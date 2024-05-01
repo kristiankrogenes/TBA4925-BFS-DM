@@ -11,6 +11,8 @@ class BFSDiffusionModel():
                 batch_size=None,
                 valid_dataset=None,
                 schedule=None,
+                condition_type=None, 
+                parameterization=None, 
                 num_timesteps=None,
                 lr=1e-3,
                 checkpoint=None):
@@ -28,17 +30,25 @@ class BFSDiffusionModel():
 
         self.optimizer = "ADAM"
         self.loss = "loss"
-
+        
+        input_channels = 1
+        if condition_type == "pred":
+            input_channels += 1
+        elif condition_type == "pred_orto":
+            input_channels += 4
+            
         self.model = DiffusionModel(batch_size=self.batch_size, 
                                     image_size=self.image_size,
+                                    generated_channels=input_channels,
                                     schedule=schedule,
+                                    parameterization=parameterization,
                                     num_timesteps=num_timesteps, 
                                     checkpoint=checkpoint, 
                                     device=self.device)
     
     @torch.no_grad()
-    def forward(self, batch_input, orto_input, parameterization):
-        return self.model(batch_input, orto_input, parameterization)
+    def forward(self, batch_input, orto_input):
+        return self.model(batch_input, orto_input)
     
     def input_T(self, input):
         # By default, let the model accept samples in [0,1] range, and transform them automatically
@@ -54,10 +64,10 @@ class BFSDiffusionModel():
                           shuffle=True,
                           num_workers=1)
     
-    def train(self, start_epoch, epochs, parameterization, model_name=None):
+    def train(self, start_epoch, epochs, model_name=None):
         print("\nStarting training...")
         data_loader = self.dataloader()
-        self.model.train(start_epoch, epochs, data_loader, parameterization, model_name=model_name)
+        self.model.train(start_epoch, epochs, data_loader, model_name=model_name)
     
-    def __call__(self, batch_input=None, orto_input=None, parameterization=None):
-        return self.forward(batch_input, orto_input, parameterization)
+    def __call__(self, batch_input=None, orto_input=None):
+        return self.forward(batch_input, orto_input)

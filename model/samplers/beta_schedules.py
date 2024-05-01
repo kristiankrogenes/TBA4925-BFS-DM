@@ -1,5 +1,6 @@
 # taken from https://huggingface.co/blog/annotated-diffusion
 import torch
+import math
 
 torch.pi = torch.acos(torch.zeros(1)).item() * 2
 
@@ -13,6 +14,8 @@ def get_beta_schedule(variant, timesteps):
         return quadratic_beta_schedule(timesteps)
     elif variant=='sigmoid':
         return sigmoid_beta_schedule(timesteps)
+    elif variant=='softplus':
+        return softplus_beta_schedule(timesteps)
     else:
         raise NotImplemented
 
@@ -43,13 +46,23 @@ def sigmoid_beta_schedule(timesteps):
     betas = torch.linspace(-6, 6, timesteps)
     return torch.sigmoid(betas) * (beta_end - beta_start) + beta_start
 
+def softplus_beta_schedule(timesteps):
+    beta_start = 0.0001
+    beta_end = 0.02
+    betas = torch.linspace(-3, 1, timesteps)
+    softplus_func = lambda x: math.log(1 + math.exp(x))
+    softplus_betas = torch.tensor([softplus_func(beta) for beta in betas])
+    return softplus_betas * (beta_end - beta_start) + beta_start
 
 if __name__ == "__main__":
 
     cosine = cosine_beta_schedule(1000)
     linear = linear_beta_schedule(1000)
+    quadratic = quadratic_beta_schedule(1000)
+    sigmoid = sigmoid_beta_schedule(1000)
+    softplus = softplus_beta_schedule(1000)
 
-    betas = linear
+    betas = softplus
     betas_sqrt = betas.sqrt()
     alphas = 1 - betas
     alphas_sqrt = alphas.sqrt()
@@ -68,8 +81,8 @@ if __name__ == "__main__":
         plt.plot(x, y, color='red', linestyle='-')
 
         plt.xlabel("Timesteps")
-        plt.ylabel("Alphsa Cumprod values")
-        plt.title("Linear Scheduler")
+        plt.ylabel("Alphas cumulative product values")
+        plt.title("Softplus Scheduler")
 
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png')

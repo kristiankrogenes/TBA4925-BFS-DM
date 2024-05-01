@@ -77,8 +77,11 @@ def run_inference(model, dataset, meta_data, save_metrics=True, save_outputs=Tru
         label, pred, orto = data
 
         # print(pred.unsqueeze(0).shape, orto.shape)
-
-        generated_tensor = model(batch_input=pred.unsqueeze(0), orto_input=orto.unsqueeze(0), parameterization=meta_data["parameterization"])
+        if meta_data["condition_type"] == "pred":
+            generated_tensor = model(batch_input=pred.unsqueeze(0))
+        elif meta_data["condition_type"] == "pred_orto":
+            generated_tensor = model(batch_input=pred.unsqueeze(0), orto_input=orto.unsqueeze(0))
+            
         generated_tensor = generated_tensor.detach().cpu()
 
         if save_outputs:
@@ -151,9 +154,11 @@ if __name__ == "__main__":
         raise ValueError("This config does not exist.")
     
     if not cfg is None:
-        meta = {"model_name": cfg.model_name, "epoch": args.epoch, "size": cfg.TARGET_SIZE[0], "batch_size": cfg.batch_size, "timesteps": cfg.timesteps, "parameterization": cfg.parameterization}
-        checkpoint_path = f"./checkpoints/{meta['model_name']}/UNet_{meta['size']}x{meta['size']}_bs{meta['batch_size']}_t{meta['timesteps']}_e{meta['epoch']}.ckpt"
+        checkpoint_path = f"./checkpoints/{cfg.model_name}/UNet_{cfg.TARGET_SIZE[0]}x{cfg.TARGET_SIZE[1]}_bs{cfg.batch_size}_t{cfg.timesteps}_e{args.epoch}.ckpt"
+        cfg.TARGET_SIZE = (512,512)
+        meta = {"model_name": cfg.model_name, "epoch": args.epoch, "size": cfg.TARGET_SIZE[0], "batch_size": cfg.batch_size, "timesteps": cfg.timesteps, "parameterization": cfg.parameterization, "condition_type": cfg.condition_type}
         timesteps = cfg.timesteps
+        print(meta["size"])
     else:
         raise ValueError("This model does not exist.")
 
@@ -162,8 +167,10 @@ if __name__ == "__main__":
                         image_size=cfg.TARGET_SIZE,
                         schedule=cfg.schedule,
                         num_timesteps=timesteps,
+                        condition_type=cfg.condition_type,
+                        parameterization=cfg.parameterization,
                         checkpoint=checkpoint_path)
-
+    print("#", cfg.TARGET_SIZE)
     T=[
         # KA.RandomCrop((2*64,2*64)),
         KA.Resize(cfg.TARGET_SIZE, antialias=True),

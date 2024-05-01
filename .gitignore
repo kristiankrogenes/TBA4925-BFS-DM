@@ -11,7 +11,9 @@ test.py
 inference/
 gaussian_samples/
 
+scripts/
 scripts/*.out
+scripts/*.slurm
 
 ddpm-seg/
 

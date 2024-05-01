@@ -14,10 +14,11 @@ from utils.utils import transform_model_output_to_image, add_row_to_csv
 class DiffusionModel(nn.Module):
 
     def __init__(self,
-                generated_channels=1,
+                generated_channels=None,
                 loss_fn=F.mse_loss,
                 learning_rate=1e-4,
                 schedule=None,
+                parameterization=None, 
                 num_timesteps=None,
                 sampler=None,
                 checkpoint=None,
@@ -28,8 +29,8 @@ class DiffusionModel(nn.Module):
         super().__init__()
 
         self.device = device
-
         self.generated_channels = generated_channels
+        self.parameterization = parameterization
         self.num_timesteps = num_timesteps
         self.batch_size = batch_size
         self.image_size = image_size
@@ -40,8 +41,8 @@ class DiffusionModel(nn.Module):
 
         self.network = UnetConvNextBlock(dim=64,
                                         dim_mults=(1, 2, 4, 8),
-                                        channels=self.generated_channels+4,
-                                        out_dim=self.generated_channels,
+                                        channels=generated_channels,
+                                        out_dim=1,
                                         with_time_emb=True)
         # self.network = SimpleUnet()
         self.network.to(self.device)
@@ -57,7 +58,7 @@ class DiffusionModel(nn.Module):
 
 
     @torch.no_grad()
-    def forward(self, batch_input=None, orto_input=None, parameterization="eps"):
+    def forward(self, batch_input=None, orto_input=None):
 
         # if not batch_input is None:
         #     x_t = batch_input.to(self.device)
@@ -66,7 +67,8 @@ class DiffusionModel(nn.Module):
         #     x_t = torch.randn([1, self.generated_channels, self.image_size, self.image_size], device=self.device)
         b, c, h, w = batch_input.shape
         condition = batch_input.to(self.device)
-        orto = orto_input.to(self.device)
+        if not orto_input == None:
+            orto = orto_input.to(self.device)
 
         x_t = torch.randn([b, c, h, w], device=self.device)
 
@@ -75,18 +77,21 @@ class DiffusionModel(nn.Module):
 
             t = torch.full((1,), i, device=self.device, dtype=torch.long)
 
-            model_input = torch.cat([x_t, condition, orto], 1).to(self.device)
+            if orto_input==None:
+                model_input = torch.cat([x_t, condition], 1).to(self.device)
+            else:
+                model_input = torch.cat([x_t, condition, orto], 1).to(self.device)
 
             z_t = self.network(model_input, t)
 
-            if parameterization == "eps":
+            if self.parameterization == "eps":
                 x_t = self.sampler(x_t, t, z_t)
-            elif parameterization == "x0":
+            elif self.parameterization == "x0":
                 x_t = z_t
-            elif parameterization == "v":
-                raise NotImplementedError(f"Parameterization {parameterization} not yet supported")
+            elif self.parameterization == "v":
+                raise NotImplementedError(f"Parameterization {self.parameterization} not yet supported")
             else:
-                raise ValueError(f"Parameterization {parameterization} not valid.")
+                raise ValueError(f"Parameterization {self.parameterization} not valid.")
            
             # -------------------------------------------------------------------------------
             if i % 10 == 0 and False:
@@ -98,7 +103,7 @@ class DiffusionModel(nn.Module):
             
         return torch.clamp(x_t, min=-1.0, max=1.0)
 
-    def train(self, start_epoch, epochs, data_loader, parameterization="eps", model_name=None):
+    def train(self, start_epoch, epochs, data_loader, model_name=None):
 
         for epoch in range(start_epoch, epochs+1):
             loss_epoch = []
@@ -117,18 +122,27 @@ class DiffusionModel(nn.Module):
                 x_t, noise = self.forward_process(label, t, return_noise=True)
                 x_t = x_t.to(self.device)
 
-                model_input = torch.cat([x_t, x_0, orto], 1).to(self.device)
+                fade_ts = t.float() / self.num_timesteps
+                fade_x0_broadcast = fade_ts.view(-1, 1, 1, 1)
+                fade_orto_broadcast = fade_ts.view(-1, 1, 1, 1)
+                x_0 = x_0 * fade_x0_broadcast
+                orto = orto * fade_orto_broadcast
+                
+                if self.generated_channels == 2:
+                    model_input = torch.cat([x_t, x_0], 1).to(self.device)
+                elif self.generated_channels == 5:
+                    model_input = torch.cat([x_t, x_0, orto], 1).to(self.device)
 
                 z_t = self.network(model_input, t)
 
-                if parameterization == "eps":
+                if self.parameterization == "eps":
                     target = noise
-                elif parameterization == "x0":
+                elif self.parameterization == "x0":
                     target = label
-                elif parameterization == "v":
-                    raise NotImplementedError(f"Parameterization {parameterization} not yet supported")
+                elif self.parameterization == "v":
+                    raise NotImplementedError(f"Parameterization {self.parameterization} not yet supported")
                 else:
-                    raise ValueError(f"Training parameterization {parameterization} not valid.")
+                    raise ValueError(f"Training parameterization {self.parameterization} not valid.")
                 
                 loss = self.loss_fn(target, z_t)
                 
