@@ -62,7 +62,7 @@ if __name__ == "__main__":
     sigmoid = sigmoid_beta_schedule(1000)
     softplus = softplus_beta_schedule(1000)
 
-    betas = softplus
+    betas = cosine
     betas_sqrt = betas.sqrt()
     alphas = 1 - betas
     alphas_sqrt = alphas.sqrt()
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     alphas_one_minus_cumprod_sqrt = (1 - alphas_cumprod).sqrt()
 
     x = [i for i in range(1000)]
-    y = alphas_cumprod.numpy()
+    y = betas.numpy()
 
     if True:
         import matplotlib.pyplot as plt
@@ -81,8 +81,8 @@ if __name__ == "__main__":
         plt.plot(x, y, color='red', linestyle='-')
 
         plt.xlabel("Timesteps")
-        plt.ylabel("Alphas cumulative product values")
-        plt.title("Softplus Scheduler")
+        plt.ylabel("Beta values")
+        plt.title("Cosine Scheduler")
 
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png')

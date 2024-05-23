@@ -3,8 +3,11 @@ import kornia.augmentation as KA
 
 from dataset import BFSDataset
 from model.BFSDiffusionModel import BFSDiffusionModel
+from model.LatentBFSDM import LatentBFSDM
 
 import model.config
+import model.configV2
+
 
 if __name__ == "__main__":
 
@@ -24,7 +27,7 @@ if __name__ == "__main__":
     # ==================================================================================================
 
     cfg = None
-    for config in model.config.configs:
+    for config in model.configV2.configs:
         if args.config_name==config.model_name:
             cfg = config
     if cfg is None:
@@ -49,14 +52,24 @@ if __name__ == "__main__":
         transforms=T
     )
 
-    bfs = BFSDiffusionModel(dataset=train_dataset,
-                            batch_size=cfg.batch_size,
-                            image_size=cfg.TARGET_SIZE,
-                            parameterization=cfg.parameterization,
-                            condition_type=cfg.condition_type,
-                            schedule=cfg.schedule,
-                            num_timesteps=cfg.timesteps,
-                            checkpoint=cfg.model_path)
+    # bfs = BFSDiffusionModel(dataset=train_dataset,
+    #                         batch_size=cfg.batch_size,
+    #                         image_size=cfg.TARGET_SIZE,
+    #                         parameterization=cfg.parameterization,
+    #                         condition_type=cfg.condition_type,
+    #                         schedule=cfg.schedule,
+    #                         # sampler="DDIM",
+    #                         num_timesteps=cfg.timesteps,
+    #                         checkpoint=cfg.model_path)
+    
+    bfs = LatentBFSDM(dataset=train_dataset,
+                    batch_size=cfg.batch_size,
+                    image_size=cfg.TARGET_SIZE,
+                    parameterization=cfg.parameterization,
+                    condition_type=cfg.condition_type,
+                    schedule=cfg.schedule,
+                    num_timesteps=cfg.timesteps,
+                    checkpoint=cfg.model_path)
     
     bfs.train(start_epoch=cfg.start_epoch, epochs=cfg.epochs, model_name=cfg.model_name)
 

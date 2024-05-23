@@ -29,130 +29,118 @@ class CFG():
         else:
             raise ValueError("Something went wrong.")
 
-conditionalV2 = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="eps",
-    condition_type="pred",
-    schedule="linear",
-    backbone=False,
-    model_name="ConditionalV2",
-    model_path="./checkpoints/ConditionalV2/UNet_128x128_bs16_t1000_e8300.ckpt"
-)
-
-x0Conditional = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="x0",
-    condition_type="pred",
-    schedule="linear",
-    backbone=False,
-    model_name="x0Conditional",
-    model_path="./checkpoints/x0Conditional/UNet_128x128_bs16_t1000_e8800.ckpt"
-)
-
-epsConditionalCosine = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="eps",
-    condition_type="pred",
-    schedule="cosine",
-    model_path="./checkpoints/epsConditionalCosine/UNet_128x128_bs16_t1000_e5000.ckpt",
-    backbone=False,
-    model_name="epsConditionalCosine",
-)
-
-# x0ConditionalCosine = CFG(
+# conditionalV2 = CFG(
 #     epochs=10000,
 #     size=128,
 #     batch_size=16,
 #     timesteps=1000,
-#     parameterization="x0",
-#     schedule="cosine",
+#     parameterization="eps",
+#     condition_type="pred",
+#     schedule="linear",
 #     backbone=False,
-#     model_name="x0ConditionalCosine",
-#     model_path="./checkpoints/x0ConditionalCosine/UNet_128x128_bs16_t1000_e8800.ckpt"
+#     model_name="ConditionalV2",
+#     model_path="./checkpoints/ConditionalV2/UNet_128x128_bs16_t1000_e8300.ckpt"
 # )
 
-epsOrtoConditionalCosine = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="eps",
-    condition_type="pred_orto",
-    schedule="cosine",
-    backbone=False,
-    model_name="epsOrtoConditionalCosine",
-    model_path="./checkpoints/epsOrtoConditionalCosine/UNet_128x128_bs16_t1000_e6500.ckpt"
-)
+# epsConditionalCosine = CFG(
+#     epochs=10000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="eps",
+#     condition_type="pred",
+#     schedule="cosine",
+#     model_path="./checkpoints/epsConditionalCosine/UNet_128x128_bs16_t1000_e5000.ckpt",
+#     backbone=False,
+#     model_name="epsConditionalCosine",
+# )
 
-x0OrtoConditionalCosine = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="x0",
-    condition_type="pred_orto",
-    schedule="cosine",
-    backbone=False,
-    model_name="x0OrtoConditionalCosine",
-    model_path="./checkpoints/x0OrtoConditionalCosine/UNet_128x128_bs16_t1000_e4400.ckpt"
-)
+# epsOrtoConditionalCosine = CFG(
+#     epochs=10000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="eps",
+#     condition_type="pred_orto",
+#     schedule="cosine",
+#     backbone=False,
+#     model_name="epsOrtoConditionalCosine",
+#     model_path="./checkpoints/epsOrtoConditionalCosine/UNet_128x128_bs16_t1000_e6500.ckpt"
+# )
 
-epsConditionalSoftplus = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="eps",
-    condition_type="pred",
-    schedule="softplus",
-    backbone=False,
-    model_name="epsConditionalSoftplus",
-    model_path="./checkpoints/epsConditionalSoftplus/UNet_128x128_bs16_t1000_e4750.ckpt"
-)
+# epsConditionalSoftplus = CFG(
+#     epochs=20000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="eps",
+#     condition_type="pred",
+#     schedule="softplus",
+#     backbone=False,
+#     model_name="epsConditionalSoftplus",
+#     model_path="./checkpoints/epsConditionalSoftplus/UNet_128x128_bs16_t1000_e10750.ckpt"
+# )
 
-epsOrtoConditionalFadeSoftplus = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="eps",
-    condition_type="pred_orto",
-    schedule="softplus",
-    backbone=True,
-    model_name="epsOrtoConditionalFadeSoftplus",
-    # model_path="./checkpoints/epsConditionalSoftplus/UNet_128x128_bs16_t1000_e4750.ckpt"
-)
+# epsOrtoConditionalFadeSoftplus = CFG(
+#     epochs=10000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="eps",
+#     condition_type="pred_orto",
+#     schedule="softplus",
+#     backbone=True,
+#     model_name="epsOrtoConditionalFadeSoftplus",
+#     # model_path="./checkpoints/epsConditionalSoftplus/UNet_128x128_bs16_t1000_e4750.ckpt"
+# )
 
-epsConditionalFadeSoftplus = CFG(
-    epochs=10000,
-    size=128,
-    batch_size=16,
-    timesteps=1000,
-    parameterization="eps",
-    condition_type="pred",
-    schedule="softplus",
-    backbone=True,
-    model_name="epsConditionalFadeSoftplus",
-    # model_path="./checkpoints/epsConditionalSoftplus/UNet_128x128_bs16_t1000_e4750.ckpt"
-)
+# epsConditionalFadeSoftplus = CFG(
+#     epochs=10000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="eps",
+#     condition_type="pred",
+#     schedule="softplus",
+#     backbone=True,
+#     model_name="epsConditionalFadeSoftplus",
+#     # model_path="./checkpoints/epsConditionalSoftplus/UNet_128x128_bs16_t1000_e4750.ckpt"
+# )
 
-configs = [
-    conditionalV2, 
-    x0Conditional, 
-    epsConditionalCosine, 
-    # x0ConditionalCosine, 
-    epsOrtoConditionalCosine,
-    x0OrtoConditionalCosine,
-    epsConditionalSoftplus,
-    epsOrtoConditionalFadeSoftplus,
-    epsConditionalFadeSoftplus
-]
+# UNetCondV1 = CFG(
+#     epochs=10000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="eps",
+#     condition_type="pred",
+#     schedule="softplus",
+#     backbone=False,
+#     model_name="UNetCondV1",
+#     model_path="./checkpoints/UNetCondV1/UNet_128x128_bs16_t1000_e750.ckpt"
+# )
+
+# UNetCondV2 = CFG(
+#     epochs=10000,
+#     size=128,
+#     batch_size=16,
+#     timesteps=1000,
+#     parameterization="eps",
+#     condition_type="pred",
+#     schedule="softplus",
+#     backbone=False,
+#     model_name="UNetCondV2",
+#     model_path="./checkpoints/UNetCondV2/UNet_128x128_bs16_t1000_e100.ckpt"
+# )
+
+
+# configs = [
+#     conditionalV2, 
+#     epsConditionalCosine, 
+#     epsOrtoConditionalCosine,
+#     epsConditionalSoftplus,
+#     epsOrtoConditionalFadeSoftplus,
+#     epsConditionalFadeSoftplus,
+#     UNetCondV1,
+#     UNetCondV2,
+# ]

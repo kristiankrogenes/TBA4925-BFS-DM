@@ -9,8 +9,10 @@ from dataset import BFSDataset
 from model.BFSDiffusionModel import BFSDiffusionModel
 from utils.utils import transform_model_output_to_image, add_row_to_csv
 import model.config
+import model.configV2
 import numpy as np
 from PIL import Image
+
 def calculate_metrics(preds, labels, verbose=False):
 
     average_accuracy = []
@@ -77,20 +79,25 @@ def run_inference(model, dataset, meta_data, save_metrics=True, save_outputs=Tru
         label, pred, orto = data
 
         # print(pred.unsqueeze(0).shape, orto.shape)
-        if meta_data["condition_type"] == "pred":
-            generated_tensor = model(batch_input=pred.unsqueeze(0))
-        elif meta_data["condition_type"] == "pred_orto":
-            generated_tensor = model(batch_input=pred.unsqueeze(0), orto_input=orto.unsqueeze(0))
+        # if meta_data["condition_type"] == "v1":
+        #     generated_tensor = model(batch_input=pred.unsqueeze(0))
+        # elif meta_data["condition_type"] == "v2":
+        #     generated_tensor = model(batch_input=pred.unsqueeze(0), orto_input=orto.unsqueeze(0))
+        # elif meta_data["condition_type"] == "v3":
+        #     generated_tensor = model(batch_input=pred.unsqueeze(0))
+        # else:
+        generated_tensor = model(batch_input=pred.unsqueeze(0))
+
             
         generated_tensor = generated_tensor.detach().cpu()
 
         if save_outputs:
             generated_image = transform_model_output_to_image(generated_tensor[0])
 
-            if not os.path.exists(f"./outputs/inference/{meta_data['model_name']}_e{meta_data['epoch']}"):
-                os.makedirs(f"./outputs/inference/{meta_data['model_name']}_e{meta_data['epoch']}")
+            if not os.path.exists(f"./outputs/inference/ddim/{meta_data['model_name']}_e{meta_data['epoch']}"):
+                os.makedirs(f"./outputs/inference/ddim/{meta_data['model_name']}_e{meta_data['epoch']}")
 
-            generated_image.save(f"./outputs/inference/{meta_data['model_name']}_e{meta_data['epoch']}/{dataset.label_files[i]}", format="PNG")
+            generated_image.save(f"./outputs/inference/ddim/{meta_data['model_name']}_e{meta_data['epoch']}/{dataset.label_files[i]}", format="PNG")
 
             # label_image = transform_model_output_to_image(label)
             # label_image.save(f"./outputs/inference/{meta_data['model_name']}_e{meta_data['epoch']}/label_{dataset.label_files[i]}", format="PNG")
@@ -113,8 +120,10 @@ def run_inference(model, dataset, meta_data, save_metrics=True, save_outputs=Tru
             average_iou.append(metrics["IoU"])
             
         print("Inference", i)
-        # if i==2:
+
+        # if i == 1:
         #     break
+
 
     if save_metrics:
         final_metrics = {"Model": meta_data["model_name"], 
@@ -147,7 +156,7 @@ if __name__ == "__main__":
     # ==================================================================================================
     
     cfg = None
-    for config in model.config.configs:
+    for config in model.configV2.configs:
         if args.model==config.model_name:
             cfg = config
     if cfg is None:
@@ -155,7 +164,7 @@ if __name__ == "__main__":
     
     if not cfg is None:
         checkpoint_path = f"./checkpoints/{cfg.model_name}/UNet_{cfg.TARGET_SIZE[0]}x{cfg.TARGET_SIZE[1]}_bs{cfg.batch_size}_t{cfg.timesteps}_e{args.epoch}.ckpt"
-        cfg.TARGET_SIZE = (512,512)
+        # cfg.TARGET_SIZE = (512,512)
         meta = {"model_name": cfg.model_name, "epoch": args.epoch, "size": cfg.TARGET_SIZE[0], "batch_size": cfg.batch_size, "timesteps": cfg.timesteps, "parameterization": cfg.parameterization, "condition_type": cfg.condition_type}
         timesteps = cfg.timesteps
         print(meta["size"])
@@ -168,9 +177,10 @@ if __name__ == "__main__":
                         schedule=cfg.schedule,
                         num_timesteps=timesteps,
                         condition_type=cfg.condition_type,
+                        # sampler="DDIM",
                         parameterization=cfg.parameterization,
                         checkpoint=checkpoint_path)
-    print("#", cfg.TARGET_SIZE)
+    # print("#", cfg.TARGET_SIZE)
     T=[
         # KA.RandomCrop((2*64,2*64)),
         KA.Resize(cfg.TARGET_SIZE, antialias=True),

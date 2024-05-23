@@ -130,14 +130,14 @@ def check_parameters_for_training(epochs, size, batch_size, timesteps, parameter
         raise ValueError("Number of timesteps must be positive.")
     elif not parameterization in ["eps", "x0", "v"]:
         raise ValueError("Type of parameterization is not valid.")
-    elif not condition_type in ["pred", "pred_orto"]:
+    elif not condition_type in ["v1", "v2", "v3", None]:
         raise ValueError("Condition type is not valid.")  
     elif not schedule in ["linear", "cosine", "softplus"]:
         raise ValueError("Type of schedule is not valid.")  
     elif not model_path==None and not os.path.exists(model_path):
         raise ValueError(f"Model {model_path} requested does not exist.")
-    elif model_name in os.listdir("./checkpoints") and model_path is None:
-        raise ValueError("Model already exists, choose another name.")
+    # elif model_name in os.listdir("./checkpoints") and model_path is None:
+    #     raise ValueError(f"Model {model_name} already exists, choose another name.")
     return True
 
 if __name__ == "__main__":
