@@ -193,7 +193,7 @@ class UnetConvNextBlock(nn.Module):
             #nn.Tanh() # ADDED
         )
 
-    def forward(self, x, time=None):
+    def forward(self, x, condition=None, time=None):
         orig_x = x
         t = None
         if time is not None and exists(self.time_mlp):
@@ -202,10 +202,17 @@ class UnetConvNextBlock(nn.Module):
         original_mean = torch.mean(x, [1, 2, 3], keepdim=True)
         h = []
 
-        for convnext, convnext2, attn, downsample in self.downs:
+        for i, (convnext, convnext2, attn, downsample) in enumerate(self.downs):
             x = convnext(x, t)
             x = convnext2(x, t)
             x = attn(x)
+            if i == 0 and not condition == None:
+                condition = convnext(condition, t)
+                condition = convnext2(condition, t)
+                condition = attn(condition)
+                # print("#", i, x.shape, condition.shape)
+                x = x + condition
+
             h.append(x)
             x = downsample(x)
 

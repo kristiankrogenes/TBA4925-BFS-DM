@@ -2,8 +2,9 @@ import torch
 from torch.utils.data import DataLoader
 
 from model.DiffusionModel import DiffusionModel
+from model.latent_autoencoder import AutoEncoder
 
-class BFSDiffusionModel():
+class LatentBFSDM():
         
     def __init__(self,
                 dataset=None,
@@ -31,18 +32,19 @@ class BFSDiffusionModel():
 
         self.optimizer = "ADAM"
         self.loss = "loss"
-        
-        input_channels = 1
-        if condition_type == "v1":
-            input_channels += 1
-        elif condition_type == "v2":
-            input_channels += 0
-        elif condition_type == "v3":
-            input_channels += 0
+
+        self.latent_scale_factor = torch.tensor(0.1)
+        self.auto_encoder = AutoEncoder()
+
+        with torch.no_grad():
+            latent_tensor = self.auto_encoder.encode(torch.ones(1, 3, self.image_size[0], self.image_size[1]))
+            print(latent_tensor.shape)
+            self.latent_dim = latent_tensor.shape[1]
+
             
         self.model = DiffusionModel(batch_size=self.batch_size, 
                                     image_size=self.image_size,
-                                    generated_channels=input_channels,
+                                    generated_channels=self.latent_dim,
                                     schedule=schedule,
                                     sampler=sampler,
                                     parameterization=parameterization,
@@ -53,15 +55,12 @@ class BFSDiffusionModel():
     
     @torch.no_grad()
     def forward(self, batch_input, orto_input):
-        return self.model(batch_input, orto_input)
-    
-    def input_T(self, input):
-        # By default, let the model accept samples in [0,1] range, and transform them automatically
-        return (input.clip(0, 1).mul_(2)).sub_(1)
-    
-    def output_T(self, input):
-        # Inverse transform of model output from [-1,1] to [0,1] range
-        return (input.add_(1)).div_(2)
+
+        condition_latent = self.auto_encoder.encode(batch_input.to(self.device)).detach() * self.latent_scale_factor
+
+        model_output_latent = self.model(condition_latent) / self.latent_scale_factor
+
+        return self.ae.decode(model_output_latent)
     
     def dataloader(self):
         return DataLoader(self.dataset,
@@ -72,7 +71,13 @@ class BFSDiffusionModel():
     def train(self, start_epoch, epochs, model_name=None):
         print("\nStarting training...")
         data_loader = self.dataloader()
-        self.model.train(start_epoch, epochs, data_loader, model_name=model_name)
+        self.model.train(
+            start_epoch, 
+            epochs, 
+            data_loader, 
+            model_name=model_name, 
+            latent_ae=[self.auto_encoder,  self.latent_scale_factor]
+        )
     
     def __call__(self, batch_input=None, orto_input=None):
         return self.forward(batch_input, orto_input)

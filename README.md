@@ -12,3 +12,17 @@ Train Command Initiliazation:
 
     python main.py --epochs 10000 --size 128 --batch_size 16 --timesteps 1000 --parameterization eps --model_path ./checkpoints/UNet_128x128_bs16_t1000_e400 --save_model ConditionalV2
     
+
+epsLinearDDPMCondV1     [X]
+epsCosineDDPMCondV1     [X]
+epsSoftplusDDPMCondV1   [X]
+
+epsSoftplusDDPMCondV2   []
+epsSoftplusDDPMCondV3   []
+
+x0SoftplusDDPMCondV1    []
+x0SoftplusDDPMCondV2    []
+x0SoftplusDDPMCondV3    []
+
+DDPM / DDIM
+Latent

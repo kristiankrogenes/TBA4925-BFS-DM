@@ -66,7 +66,7 @@ def compare_inference_pred_label_orto(model, image_code):
     
     image1 = Image.open(f"./outputs/inference/{model}/{image_code}.png")
     image2 = Image.open(f"./data/processed/predictions/val/{image_code}.png")
-    image3 = Image.open(f"./data/original/ortophotos/{image_code}.png")
+    image3 = Image.open(f"./data/original/ortophotos/val/{image_code}.png")
     image4 = Image.open(f"./data/original/labels/val/{image_code}.png")
 
     width, height = image1.size
@@ -87,12 +87,12 @@ def compare_inference_pred_label_orto(model, image_code):
 
     calculate_metrics(image1_tensor, image4_tensor, verbose=True)
 
-    combined_image = Image.new("RGB", (2 * width, 2 * height))
+    combined_image = Image.new("RGB", (3 * width, 1 * height))
 
-    combined_image.paste(image1, (0, 0))
+    combined_image.paste(image3, (0, 0))
     combined_image.paste(image2, (width, 0))
-    combined_image.paste(image3, (0, height))
-    combined_image.paste(image4, (width, height))
+    # combined_image.paste(image3, (0, height))
+    combined_image.paste(image4, (width*2, 0))
 
     folder_path = os.path.join("./outputs/comparisons", model)
 
@@ -119,7 +119,7 @@ def add_row_to_csv(file_path, new_row):
         writer.writerows(existing_data)
 
 
-def check_parameters_for_training(epochs, size, batch_size, timesteps, parameterization, schedule, model_path, model_name):
+def check_parameters_for_training(epochs, size, batch_size, timesteps, parameterization, condition_type, schedule, model_path, model_name):
     if epochs == None or epochs < 1:
         raise ValueError("Number of epochs must be given and be a positive number.")
     elif size < 1:
@@ -130,12 +130,14 @@ def check_parameters_for_training(epochs, size, batch_size, timesteps, parameter
         raise ValueError("Number of timesteps must be positive.")
     elif not parameterization in ["eps", "x0", "v"]:
         raise ValueError("Type of parameterization is not valid.")
-    elif not schedule in ["linear", "cosine"]:
+    elif not condition_type in ["v1", "v2", "v3", None]:
+        raise ValueError("Condition type is not valid.")  
+    elif not schedule in ["linear", "cosine", "softplus"]:
         raise ValueError("Type of schedule is not valid.")  
     elif not model_path==None and not os.path.exists(model_path):
-        raise ValueError("Model requested does not exist.")
-    elif model_name in os.listdir("./checkpoints") and model_path is None:
-        raise ValueError("Model already exists, choose another name.")
+        raise ValueError(f"Model {model_path} requested does not exist.")
+    # elif model_name in os.listdir("./checkpoints") and model_path is None:
+    #     raise ValueError(f"Model {model_name} already exists, choose another name.")
     return True
 
 if __name__ == "__main__":

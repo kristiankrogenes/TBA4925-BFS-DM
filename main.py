@@ -3,8 +3,11 @@ import kornia.augmentation as KA
 
 from dataset import BFSDataset
 from model.BFSDiffusionModel import BFSDiffusionModel
+from model.LatentBFSDM import LatentBFSDM
 
 import model.config
+import model.configV2
+
 
 if __name__ == "__main__":
 
@@ -24,7 +27,7 @@ if __name__ == "__main__":
     # ==================================================================================================
 
     cfg = None
-    for config in model.config.configs:
+    for config in model.configV2.configs:
         if args.config_name==config.model_name:
             cfg = config
     if cfg is None:
@@ -49,26 +52,38 @@ if __name__ == "__main__":
         transforms=T
     )
 
-    bfs = BFSDiffusionModel(dataset=train_dataset,
-                            batch_size=cfg.batch_size,
-                            image_size=cfg.TARGET_SIZE,
-                            schedule=cfg.schedule,
-                            num_timesteps=cfg.timesteps,
-                            checkpoint=cfg.model_path)
+    # bfs = BFSDiffusionModel(dataset=train_dataset,
+    #                         batch_size=cfg.batch_size,
+    #                         image_size=cfg.TARGET_SIZE,
+    #                         parameterization=cfg.parameterization,
+    #                         condition_type=cfg.condition_type,
+    #                         schedule=cfg.schedule,
+    #                         # sampler="DDIM",
+    #                         num_timesteps=cfg.timesteps,
+    #                         checkpoint=cfg.model_path)
     
-    bfs.train(start_epoch=cfg.start_epoch, epochs=cfg.epochs, parameterization=cfg.parameterization, model_name=cfg.model_name)
+    bfs = LatentBFSDM(dataset=train_dataset,
+                    batch_size=cfg.batch_size,
+                    image_size=cfg.TARGET_SIZE,
+                    parameterization=cfg.parameterization,
+                    condition_type=cfg.condition_type,
+                    schedule=cfg.schedule,
+                    num_timesteps=cfg.timesteps,
+                    checkpoint=cfg.model_path)
+    
+    bfs.train(start_epoch=cfg.start_epoch, epochs=cfg.epochs, model_name=cfg.model_name)
 
     # from model.samplers.forward_process import GaussianForwardProcess
     # from torch.utils.data import DataLoader
-    # fp = GaussianForwardProcess(1000, "cosine")
+    # fp = GaussianForwardProcess(1000, "softplus")
 
     # data_batch = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1)
 
     # for bi, batch in enumerate(data_batch):
-    #     if bi == 0:
+    #     if bi == 3:
     #         label, x_0, orto = batch
     #         print(label.shape, x_0.shape, orto.shape)
-    #         # x_t = label
-    #         # for ti in range(1000):
-    #         #     x_t = fp.step(x_t, ti, return_noise=False, sample_path="33921_10912")
+    #         x_t = label
+    #         for ti in range(1000):
+    #             x_t = fp.step(x_t, ti, return_noise=False, sample_path="3392_10912")
     #         break
