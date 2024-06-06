@@ -142,9 +142,33 @@ def check_parameters_for_training(epochs, size, batch_size, timesteps, parameter
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Parameters to compare images.")
-    parser.add_argument('--model', type=str, help="Name of a trained model.")
-    parser.add_argument('--image_code', type=str, help="Image code of a given image.")
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description="Parameters to compare images.")
+    # parser.add_argument('--model', type=str, help="Name of a trained model.")
+    # parser.add_argument('--image_code', type=str, help="Image code of a given image.")
+    # args = parser.parse_args()
 
-    compare_inference_pred_label_orto(args.model, args.image_code)
+    # compare_inference_pred_label_orto(args.model, args.image_code)
+
+    # image1 = Image.open(f"./outputs/forward/softplus/3392_10912/noisesample_t0.png")
+
+    # inf = 1
+    sch = "cond3"
+    images = [None for _ in range(11)]
+    folder_path = f"./subrev/experiment3/{sch}/55_4112/"
+    for im_name in os.listdir(folder_path):
+        image = Image.open(f"{folder_path}{im_name}")
+        # image = image.resize((128,128))
+        print(im_name)
+        num = int(im_name[:-4].split("_")[1])
+        print(num)
+        images[int(num/100)] = image
+        # images.append(image)
+    width, height = images[0].size
+    images.reverse()
+
+    combined_image = Image.new("RGB", (len(images) * width, 1 * height))
+
+    for i in range(len(images)):
+        combined_image.paste(images[i], (i*width, 0))
+
+    combined_image.save(f"./subrev/experiment3/{sch}/55_4112/rp_{sch}.png", format="PNG")

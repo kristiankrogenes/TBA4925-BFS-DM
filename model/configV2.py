@@ -109,7 +109,7 @@ epsCosineDDPMCondV1_T = CFG2(
     condition_type="v1",
     schedule="cosine",
     model_name="epsCosineDDPMCondV1_T",
-    # model_path="./checkpoints/epsCosineDDPMCondV1/UNet_128x128_bs16_t1000_e6100.ckpt"
+    model_path="./checkpoints/epsCosineDDPMCondV1_T/UNet_128x128_bs16_t1000_e10000.ckpt"
 )
 
 epsSoftplusDDPMCondV3 = CFG2(

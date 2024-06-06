@@ -5,9 +5,9 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem=40G
-#SBATCH --job-name="eps_cos_cond1_T"
-#SBATCH --output=./scripts/eps_cos_cond1_T.out
+#SBATCH --job-name="BFSDM_Latent"
+#SBATCH --output=./scripts/BFSDM_Latent.out
 #SBATCH --gres=gpu:1
 
 module load Python/3.10.4-GCCcore-11.3.0
-python main.py --config_name epsCosineDDPMCondV1_T
+python main.py --config_name epsSoftplusDDPMCondV3Latent

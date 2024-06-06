@@ -37,6 +37,10 @@ class GaussianForwardProcess(nn.Module):
         noise = torch.randn_like(x0)
 
         xt = mean + std * noise
+
+        # clamped_output = torch.clamp(xt, min=-1.0, max=1.0)
+        # diffused_sample = transform_model_output_to_image(clamped_output[0].detach().cpu())
+        # diffused_sample.save(f"fw_diffused_sample_t{t}.png", format="PNG")  
         
         if not return_noise:
             return xt
@@ -60,6 +64,8 @@ class GaussianForwardProcess(nn.Module):
             if t == 0:
                 input_sample = transform_model_output_to_image(x_t[0].detach().cpu())
                 input_sample.save(f"{folder_path}/input_sample_t{t}.png", format="PNG") 
+                noise_sample = transform_model_output_to_image(noise[0].detach().cpu())
+                noise_sample.save(f"{folder_path}/noisesample_t{t}.png", format="PNG")
             if t % 100 == 0 or t==999:
                 clamped_output = torch.clamp(output, min=-1.0, max=1.0)
                 diffused_sample = transform_model_output_to_image(clamped_output[0].detach().cpu())

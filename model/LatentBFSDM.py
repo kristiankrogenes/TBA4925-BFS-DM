@@ -56,9 +56,10 @@ class LatentBFSDM():
     @torch.no_grad()
     def forward(self, batch_input, orto_input):
 
+        batch_input = batch_input.expand(-1, 3, -1, -1)
         condition_latent = self.auto_encoder.encode(batch_input.to(self.device)).detach() * self.latent_scale_factor
 
-        model_output_latent = self.model(condition_latent) / self.latent_scale_factor
+        model_output_latent = self.model(condition_latent, latent_ae=[self.auto_encoder,  self.latent_scale_factor]) / self.latent_scale_factor
 
         return self.ae.decode(model_output_latent)
     

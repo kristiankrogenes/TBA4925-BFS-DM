@@ -207,10 +207,11 @@ class UnetConvNextBlock(nn.Module):
             x = convnext2(x, t)
             x = attn(x)
             if i == 0 and not condition == None:
-                condition = convnext(condition, t)
-                condition = convnext2(condition, t)
-                condition = attn(condition)
+                # condition = convnext(condition, t)
+                # condition = convnext2(condition, t)
+                # condition = attn(condition)
                 # print("#", i, x.shape, condition.shape)
+                # print("###", x.shape, condition.shape)
                 x = x + condition
 
             h.append(x)

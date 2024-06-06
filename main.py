@@ -62,28 +62,28 @@ if __name__ == "__main__":
     #                         num_timesteps=cfg.timesteps,
     #                         checkpoint=cfg.model_path)
     
-    bfs = LatentBFSDM(dataset=train_dataset,
-                    batch_size=cfg.batch_size,
-                    image_size=cfg.TARGET_SIZE,
-                    parameterization=cfg.parameterization,
-                    condition_type=cfg.condition_type,
-                    schedule=cfg.schedule,
-                    num_timesteps=cfg.timesteps,
-                    checkpoint=cfg.model_path)
+    # bfs = LatentBFSDM(dataset=train_dataset,
+    #                 batch_size=cfg.batch_size,
+    #                 image_size=cfg.TARGET_SIZE,
+    #                 parameterization=cfg.parameterization,
+    #                 condition_type=cfg.condition_type,
+    #                 schedule=cfg.schedule,
+    #                 num_timesteps=cfg.timesteps,
+    #                 checkpoint=cfg.model_path)
     
-    bfs.train(start_epoch=cfg.start_epoch, epochs=cfg.epochs, model_name=cfg.model_name)
+    # bfs.train(start_epoch=cfg.start_epoch, epochs=cfg.epochs, model_name=cfg.model_name)
 
-    # from model.samplers.forward_process import GaussianForwardProcess
-    # from torch.utils.data import DataLoader
-    # fp = GaussianForwardProcess(1000, "softplus")
+    from model.samplers.forward_process import GaussianForwardProcess
+    from torch.utils.data import DataLoader
+    fp = GaussianForwardProcess(1000, "softplus")
 
-    # data_batch = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1)
+    data_batch = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1)
 
-    # for bi, batch in enumerate(data_batch):
-    #     if bi == 3:
-    #         label, x_0, orto = batch
-    #         print(label.shape, x_0.shape, orto.shape)
-    #         x_t = label
-    #         for ti in range(1000):
-    #             x_t = fp.step(x_t, ti, return_noise=False, sample_path="3392_10912")
-    #         break
+    for bi, batch in enumerate(data_batch):
+        if bi == 3:
+            label, x_0, orto = batch
+            print(label.shape, x_0.shape, orto.shape)
+            x_t = label
+            for ti in range(1000):
+                x_t = fp.step(x_t, ti, return_noise=False, sample_path="3392_10912")
+            break

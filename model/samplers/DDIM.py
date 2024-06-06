@@ -41,7 +41,7 @@ class DDIMSampler(nn.Module):
         """
             Given approximation of noise z_t in x_t predict x_(t-1)
         """
-        assert (t<self.num_timesteps).all()
+        # assert (t<self.num_timesteps).all()
         b,c,h,w=z_t.shape
         # device=z_t.device
         
